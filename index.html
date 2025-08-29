@@ -168,8 +168,6 @@
     const statB = $('#statB');
     const statR2= $('#statR2');
 
-    const residualToggle = $('#residualToggle');
-
     // Tiny DOM builder for SVG
     function d3select(selector) { return document.querySelector('#plot ' + selector); }
     function elNS(tag) { return document.createElementNS('http://www.w3.org/2000/svg', tag); }
@@ -269,19 +267,8 @@
         gReg.appendChild(line);
       }
 
-      // Residuals
+      // Residuals (always hidden now)
       gRes.innerHTML = '';
-      if (residualToggle.checked && isFinite(s.m)) {
-        for (let i=0;i<points.length;i++){
-          const p = points[i];
-          const yhat = s.m * p.x + s.b;
-          const r = elNS('line');
-          r.setAttribute('x1', x2px(p.x)); r.setAttribute('y1', y2px(p.y));
-          r.setAttribute('x2', x2px(p.x)); r.setAttribute('y2', y2px(yhat));
-          r.setAttribute('class','residual');
-          gRes.appendChild(r);
-        }
-      }
 
       if (!full) { // skip re-drawing points during drag creation
         return;
@@ -306,89 +293,4 @@
         c.addEventListener('contextmenu', (e) => { // right-click delete
           e.preventDefault(); removePoint(i);
         });
-        c.addEventListener('pointermove', (e) => {
-          if (dragging === i) {
-            const pt = clientToSVG(e.clientX, e.clientY);
-            let x = px2x(pt.x), y = px2y(pt.y);
-            if (e.shiftKey) { x = roundTo(x, 5); y = roundTo(y, 5); }
-            setPoint(i, x, y);
-            // Update circle position immediately for smoothness
-            c.setAttribute('cx', x2px(points[i].x));
-            c.setAttribute('cy', y2px(points[i].y));
-          }
-        });
-        c.addEventListener('pointerup', () => { dragging = null; render(true); });
-        c.addEventListener('pointercancel', () => { dragging = null; render(true); });
-        gPts.appendChild(c);
-      });
-    }
-
-    /* --- Interaction: add points & crosshair --- */
-    const svg = document.getElementById('plot');
-
-    function clientToSVG(cx, cy){
-      const pt = svg.createSVGPoint();
-      pt.x = cx; pt.y = cy;
-      const ctm = svg.getScreenCTM().inverse();
-      const p = pt.matrixTransform(ctm);
-      return p;
-    }
-
-    // Transparent rect over plotting area to handle clicks
-    const hit = elNS('rect');
-    hit.setAttribute('x', inner.x); hit.setAttribute('y', inner.y);
-    hit.setAttribute('width', inner.w); hit.setAttribute('height', inner.h);
-    hit.setAttribute('fill', 'transparent');
-    hit.style.cursor = 'crosshair';
-    svg.appendChild(hit);
-
-    hit.addEventListener('pointerdown', (e) => {
-      // prevent adding when dragging a point
-      if (dragging !== null) return;
-      const p = clientToSVG(e.clientX, e.clientY);
-      let x = px2x(p.x), y = px2y(p.y);
-      if (e.shiftKey) { x = roundTo(x, 5); y = roundTo(y, 5); }
-      addPoint(x,y);
-    });
-
-    // Crosshair
-    const chV = elNS('line'); const chH = elNS('line');
-    chV.setAttribute('x1',0); chV.setAttribute('x2',0);
-    chH.setAttribute('y1',0); chH.setAttribute('y2',0);
-    gCross.appendChild(chV); gCross.appendChild(chH);
-
-    hit.addEventListener('pointermove', (e)=>{
-      const p = clientToSVG(e.clientX, e.clientY);
-      const x = clamp(p.x, inner.x, inner.x+inner.w);
-      const y = clamp(p.y, inner.y, inner.y+inner.h);
-      chV.setAttribute('x1', x); chV.setAttribute('x2', x);
-      chV.setAttribute('y1', inner.y); chV.setAttribute('y2', inner.y+inner.h);
-      chH.setAttribute('x1', inner.x); chH.setAttribute('x2', inner.x+inner.w);
-      chH.setAttribute('y1', y); chH.setAttribute('y2', y);
-    });
-
-    /* --- Buttons --- */
-    document.getElementById('resetBtn').addEventListener('click', ()=>{ points = []; render(); });
-    document.getElementById('randomBtn').addEventListener('click', ()=>{
-      points = Array.from({length:10}, (_,i)=>({ x: Math.random()*100, y: Math.random()*100 }));
-      render();
-    });
-    document.getElementById('downloadBtn').addEventListener('click', ()=>{
-      const rows = [['x','y'], ...points.map(p=>[p.x.toFixed(6), p.y.toFixed(6)])];
-      const csv = rows.map(r=>r.join(',')).join('\n');
-      const blob = new Blob([csv], {type:'text/csv'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'points.csv';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-    });
-
-    residualToggle.addEventListener('change', ()=> render());
-
-    // Initial draw
-    drawAxes();
-    render();
-  </script>
-</body>
-</html>
+        c.addEvent
