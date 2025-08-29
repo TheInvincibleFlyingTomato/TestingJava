@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interactive Linear Regression</title>
+  <style>
+    :root {
+      --bg: #0f172a; /* slate-900 */
+      --panel: #111827; /* gray-900 */
+      --muted: #334155; /* slate-600 */
+      --ink: #e5e7eb; /* gray-200 */
+      --accent: #22c55e; /* green-500 */
+      --accent-2: #3b82f6; /* blue-500 */
+      --danger: #ef4444; /* red-500 */
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: linear-gradient(180deg, #0b1220, #0f172a);
+      color: var(--ink);
+      display: grid;
+      place-items: center;
+    }
+    .app {
+      width: min(1100px, 95vw);
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+      padding: 20px;
+    }
+    .card {
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    .panel { padding: 16px 18px; }
+    h1 { font-size: 20px; margin: 0 0 6px; letter-spacing: .2px; }
+    p { margin: 6px 0 0; color: #cbd5e1; font-size: 14px; }
+
+    /* Plot */
+    .plot-wrap { padding: 14px; }
+    svg { width: 100%; height: 70vh; min-height: 420px; display: block; border-radius: 12px; }
+    .axis line, .axis path { stroke: #475569; stroke-width: 1; }
+    .grid line { stroke: #1f2937; stroke-width: 1; }
+    .point { cursor: grab; }
+    .point:active { cursor: grabbing; }
+    .reg-line { stroke: var(--accent); stroke-width: 2.5; }
+    .residual { stroke: var(--accent-2); stroke-dasharray: 5 4; opacity: .8; }
+    .hover-crosshair line { stroke: rgba(148,163,184,.35); stroke-width: 1; }
+
+    /* Controls */
+    .controls { display: grid; gap: 10px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .btn {
+      background: #0b1220;
+      color: var(--ink);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      transition: transform .05s ease, background .2s ease, border-color .2s ease;
+    }
+    .btn:hover { background: #0f172a; }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { border-color: rgba(34, 197, 94, .8); }
+    .btn.danger { border-color: rgba(239, 68, 68, .8); }
+    .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #cbd5e1; }
+    .stat { font-variant-numeric: tabular-nums; font-size: 14px; color: #cbd5e1; }
+    code { background: #0b1220; border: 1px solid rgba(148,163,184,.2); padding: 2px 6px; border-radius: 8px; }
+    .kbd { border: 1px solid rgba(148,163,184,.35); padding: 2px 6px; border-radius: 6px; font-size: 12px; }
+    .small { font-size: 12px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card plot-wrap">
+      <svg id="plot" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <clipPath id="clip">
+            <rect x="60" y="20" width="700" height="520" rx="10" ry="10"/>
+          </clipPath>
+        </defs>
+        <!-- Background -->
+        <rect x="0" y="0" width="800" height="600" fill="#0b1220" rx="12"/>
+        <g class="grid" clip-path="url(#clip)"></g>
+        <g class="residuals" clip-path="url(#clip)"></g>
+        <g class="regression" clip-path="url(#clip)"></g>
+        <g class="points" clip-path="url(#clip)"></g>
+        <g class="hover-crosshair" clip-path="url(#clip)"></g>
+        <g class="axes"></g>
+      </svg>
+    </div>
+
+    <div class="card panel">
+      <h1>Interactive Linear Regression</h1>
+      <p>Click the plot to <strong>add a point</strong>. Drag points to move them. <span class="small">(Right‑click to delete)</span></p>
+      <div class="controls" style="margin-top:12px;">
+        <div class="row">
+          <button class="btn primary" id="resetBtn">Reset points</button>
+          <button class="btn" id="randomBtn">Random 10</button>
+          <button class="btn" id="downloadBtn">Download CSV</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="residualToggle" checked/> Show residuals</label>
+        <div class="row">
+          <div class="stat">n = <span id="statN">0</span></div>
+          <div class="stat">m = <span id="statM">—</span></div>
+          <div class="stat">b = <span id="statB">—</span></div>
+          <div class="stat">R² = <span id="statR2">—</span></div>
+        </div>
+        <p class="small">Data space is <code>x \u2208 [0,100]</code>, <code>y \u2208 [0,100]</code>. Hold <span class="kbd">Shift</span> while clicking to snap to grid.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* --- Utilities: scales & math --- */
+    const W = 800, H = 600;
+    const PAD = { l: 60, r: 40, t: 20, b: 60 };
+    const inner = { x: PAD.l, y: PAD.t, w: W - PAD.l - PAD.r, h: H - PAD.t - PAD.b };
+    const XMIN = 0, XMAX = 100, YMIN = 0, YMAX = 100;
+
+    const x2px = x => inner.x + (x - XMIN) / (XMAX - XMIN) * inner.w;
+    const y2px = y => inner.y + inner.h - (y - YMIN) / (YMAX - YMIN) * inner.h;
+    const px2x = px => XMIN + ((px - inner.x) / inner.w) * (XMAX - XMIN);
+    const px2y = py => YMIN + ((inner.y + inner.h - py) / inner.h) * (YMAX - YMIN);
+
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const roundTo = (v, step=1) => Math.round(v / step) * step;
+
+    function stats(points) {
+      const n = points.length;
+      if (n < 2) return { n, m: NaN, b: NaN, r2: NaN };
+      let sx=0, sy=0, sxx=0, syy=0, sxy=0;
+      for (const p of points) {
+        const x = p.x, y = p.y;
+        sx += x; sy += y; sxx += x*x; syy += y*y; sxy += x*y;
+      }
+      const mx = sx/n, my = sy/n;
+      const Sxx = sxx - n*mx*mx;
+      const Syy = syy - n*my*my;
+      const Sxy = sxy - n*mx*my;
+      const m = Sxx === 0 ? NaN : Sxy / Sxx;
+      const b = isNaN(m) ? NaN : my - m*mx;
+      let r2 = NaN;
+      if (!isNaN(m)) {
+        const ssRes = points.reduce((acc,p)=> acc + (p.y - (m*p.x + b))**2, 0);
+        const ssTot = points.reduce((acc,p)=> acc + (p.y - my)**2, 0);
+        r2 = ssTot === 0 ? 1 : 1 - ssRes/ssTot;
+      }
+      return { n, m, b, r2 };
+    }
+
+    /* --- DOM helpers --- */
+    const $ = sel => document.querySelector(sel);
+    const gGrid = d3select('.grid');
+    const gPts  = d3select('.points');
+    const gReg  = d3select('.regression');
+    const gRes  = d3select('.residuals');
+    const gAx   = d3select('.axes');
+    const gCross= d3select('.hover-crosshair');
+
+    const statN = $('#statN');
+    const statM = $('#statM');
+    const statB = $('#statB');
+    const statR2= $('#statR2');
+
+    const residualToggle = $('#residualToggle');
+
+    // Tiny DOM builder for SVG
+    function d3select(selector) { return document.querySelector('#plot ' + selector); }
+    function elNS(tag) { return document.createElementNS('http://www.w3.org/2000/svg', tag); }
+
+    /* --- Axes & grid --- */
+    function drawAxes() {
+      gAx.innerHTML = '';
+      const axis = elNS('g'); axis.setAttribute('class','axis');
+      // X axis
+      let path = elNS('path');
+      path.setAttribute('d', `M ${inner.x} ${inner.y+inner.h} H ${inner.x+inner.w}`);
+      axis.appendChild(path);
+      // Y axis
+      path = elNS('path');
+      path.setAttribute('d', `M ${inner.x} ${inner.y} V ${inner.y+inner.h}`);
+      axis.appendChild(path);
+
+      // Ticks & labels
+      const ticks = 10, step = (XMAX - XMIN)/ticks;
+      for (let i=0;i<=ticks;i++){
+        const x = XMIN + i*step;
+        const px = x2px(x);
+        const t = elNS('line'); t.setAttribute('x1', px); t.setAttribute('x2', px);
+        t.setAttribute('y1', inner.y+inner.h); t.setAttribute('y2', inner.y+inner.h+6);
+        t.setAttribute('stroke', '#64748b'); axis.appendChild(t);
+        const lab = elNS('text'); lab.setAttribute('x', px); lab.setAttribute('y', inner.y+inner.h+20);
+        lab.setAttribute('text-anchor','middle'); lab.setAttribute('font-size','12'); lab.setAttribute('fill','#cbd5e1');
+        lab.textContent = Math.round(x);
+        axis.appendChild(lab);
+      }
+      for (let i=0;i<=ticks;i++){
+        const y = YMIN + i*step;
+        const py = y2px(y);
+        const t = elNS('line'); t.setAttribute('x1', inner.x-6); t.setAttribute('x2', inner.x);
+        t.setAttribute('y1', py); t.setAttribute('y2', py);
+        t.setAttribute('stroke', '#64748b'); axis.appendChild(t);
+        const lab = elNS('text'); lab.setAttribute('x', inner.x-10); lab.setAttribute('y', py+4);
+        lab.setAttribute('text-anchor','end'); lab.setAttribute('font-size','12'); lab.setAttribute('fill','#cbd5e1');
+        lab.textContent = Math.round(y);
+        axis.appendChild(lab);
+      }
+      gAx.appendChild(axis);
+
+      // Grid
+      gGrid.innerHTML = '';
+      for (let i=0;i<=10;i++){
+        const x = inner.x + (i/10)*inner.w;
+        const gl = elNS('line'); gl.setAttribute('x1', x); gl.setAttribute('x2', x);
+        gl.setAttribute('y1', inner.y); gl.setAttribute('y2', inner.y+inner.h);
+        gGrid.appendChild(gl);
+        const y = inner.y + (i/10)*inner.h;
+        const gl2 = elNS('line'); gl2.setAttribute('x1', inner.x); gl2.setAttribute('x2', inner.x+inner.w);
+        gl2.setAttribute('y1', y); gl2.setAttribute('y2', y);
+        gGrid.appendChild(gl2);
+      }
+    }
+
+    /* --- State --- */
+    let points = [];
+    let dragging = null; // index of point being dragged
+
+    function addPoint(x,y) {
+      points.push({ x: clamp(x, XMIN, XMAX), y: clamp(y, YMIN, YMAX) });
+      render();
+    }
+
+    function removePoint(idx) {
+      points.splice(idx,1);
+      render();
+    }
+
+    function setPoint(idx, x, y) {
+      points[idx].x = clamp(x, XMIN, XMAX);
+      points[idx].y = clamp(y, YMIN, YMAX);
+      render(false); // partial render for performance during drag
+    }
+
+    /* --- Rendering --- */
+    function render(full=true) {
+      // Stats & regression
+      const s = stats(points);
+      statN.textContent = s.n;
+      statM.textContent = isFinite(s.m) ? s.m.toFixed(4) : '—';
+      statB.textContent = isFinite(s.b) ? s.b.toFixed(4) : '—';
+      statR2.textContent= isFinite(s.r2) ? s.r2.toFixed(4) : '—';
+
+      // Regression line
+      gReg.innerHTML = '';
+      if (isFinite(s.m) && isFinite(s.b)) {
+        // Compute line segment clipped to plot bounds in data space
+        const xA = XMIN, yA = s.m * xA + s.b;
+        const xB = XMAX, yB = s.m * xB + s.b;
+        const line = elNS('line');
+        line.setAttribute('x1', x2px(xA)); line.setAttribute('y1', y2px(yA));
+        line.setAttribute('x2', x2px(xB)); line.setAttribute('y2', y2px(yB));
+        line.setAttribute('class', 'reg-line');
+        gReg.appendChild(line);
+      }
+
+      // Residuals
+      gRes.innerHTML = '';
+      if (residualToggle.checked && isFinite(s.m)) {
+        for (let i=0;i<points.length;i++){
+          const p = points[i];
+          const yhat = s.m * p.x + s.b;
+          const r = elNS('line');
+          r.setAttribute('x1', x2px(p.x)); r.setAttribute('y1', y2px(p.y));
+          r.setAttribute('x2', x2px(p.x)); r.setAttribute('y2', y2px(yhat));
+          r.setAttribute('class','residual');
+          gRes.appendChild(r);
+        }
+      }
+
+      if (!full) { // skip re-drawing points during drag creation
+        return;
+      }
+
+      // Points
+      gPts.innerHTML = '';
+      points.forEach((p, i) => {
+        const c = elNS('circle');
+        c.setAttribute('cx', x2px(p.x));
+        c.setAttribute('cy', y2px(p.y));
+        c.setAttribute('r', 6);
+        c.setAttribute('fill', '#e5e7eb');
+        c.setAttribute('stroke', '#94a3b8');
+        c.setAttribute('class', 'point');
+        c.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          if (e.button === 2) return; // ignore right-click here
+          dragging = i;
+          c.setPointerCapture(e.pointerId);
+        });
+        c.addEventListener('contextmenu', (e) => { // right-click delete
+          e.preventDefault(); removePoint(i);
+        });
+        c.addEventListener('pointermove', (e) => {
+          if (dragging === i) {
+            const pt = clientToSVG(e.clientX, e.clientY);
+            let x = px2x(pt.x), y = px2y(pt.y);
+            if (e.shiftKey) { x = roundTo(x, 5); y = roundTo(y, 5); }
+            setPoint(i, x, y);
+            // Update circle position immediately for smoothness
+            c.setAttribute('cx', x2px(points[i].x));
+            c.setAttribute('cy', y2px(points[i].y));
+          }
+        });
+        c.addEventListener('pointerup', () => { dragging = null; render(true); });
+        c.addEventListener('pointercancel', () => { dragging = null; render(true); });
+        gPts.appendChild(c);
+      });
+    }
+
+    /* --- Interaction: add points & crosshair --- */
+    const svg = document.getElementById('plot');
+
+    function clientToSVG(cx, cy){
+      const pt = svg.createSVGPoint();
+      pt.x = cx; pt.y = cy;
+      const ctm = svg.getScreenCTM().inverse();
+      const p = pt.matrixTransform(ctm);
+      return p;
+    }
+
+    // Transparent rect over plotting area to handle clicks
+    const hit = elNS('rect');
+    hit.setAttribute('x', inner.x); hit.setAttribute('y', inner.y);
+    hit.setAttribute('width', inner.w); hit.setAttribute('height', inner.h);
+    hit.setAttribute('fill', 'transparent');
+    hit.style.cursor = 'crosshair';
+    svg.appendChild(hit);
+
+    hit.addEventListener('pointerdown', (e) => {
+      // prevent adding when dragging a point
+      if (dragging !== null) return;
+      const p = clientToSVG(e.clientX, e.clientY);
+      let x = px2x(p.x), y = px2y(p.y);
+      if (e.shiftKey) { x = roundTo(x, 5); y = roundTo(y, 5); }
+      addPoint(x,y);
+    });
+
+    // Crosshair
+    const chV = elNS('line'); const chH = elNS('line');
+    chV.setAttribute('x1',0); chV.setAttribute('x2',0);
+    chH.setAttribute('y1',0); chH.setAttribute('y2',0);
+    gCross.appendChild(chV); gCross.appendChild(chH);
+
+    hit.addEventListener('pointermove', (e)=>{
+      const p = clientToSVG(e.clientX, e.clientY);
+      const x = clamp(p.x, inner.x, inner.x+inner.w);
+      const y = clamp(p.y, inner.y, inner.y+inner.h);
+      chV.setAttribute('x1', x); chV.setAttribute('x2', x);
+      chV.setAttribute('y1', inner.y); chV.setAttribute('y2', inner.y+inner.h);
+      chH.setAttribute('x1', inner.x); chH.setAttribute('x2', inner.x+inner.w);
+      chH.setAttribute('y1', y); chH.setAttribute('y2', y);
+    });
+
+    /* --- Buttons --- */
+    document.getElementById('resetBtn').addEventListener('click', ()=>{ points = []; render(); });
+    document.getElementById('randomBtn').addEventListener('click', ()=>{
+      points = Array.from({length:10}, (_,i)=>({ x: Math.random()*100, y: Math.random()*100 }));
+      render();
+    });
+    document.getElementById('downloadBtn').addEventListener('click', ()=>{
+      const rows = [['x','y'], ...points.map(p=>[p.x.toFixed(6), p.y.toFixed(6)])];
+      const csv = rows.map(r=>r.join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'points.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    });
+
+    residualToggle.addEventListener('change', ()=> render());
+
+    // Initial draw
+    drawAxes();
+    render();
+  </script>
+</body>
+</html>
