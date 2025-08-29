@@ -2,24 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Interactive Linear Regression with Axes TEST</title>
+  <title>Interactive Linear Regression with Axes & Data Table</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; }
-    #plot { border: 1px solid #ccc; margin: 20px auto; background: #fafafa; }
+    body { font-family: sans-serif; text-align: center; display: flex; justify-content: center; }
+    #container { display: flex; gap: 20px; margin-top: 20px; }
+    #plot { border: 1px solid #ccc; background: #fafafa; }
     .point { cursor: grab; fill: crimson; }
     .line { stroke: steelblue; stroke-width: 2; }
     .axis path, .axis line { stroke: #888; }
+    #table-container { max-height: 350px; overflow-y: auto; border: 1px solid #ccc; padding: 5px; }
+    table { border-collapse: collapse; width: 200px; margin: 0 auto; }
+    th, td { border: 1px solid #ccc; padding: 4px; font-size: 12px; }
+    th { background: #eee; }
   </style>
 </head>
 <body>
-  <h2>Interactive Linear Regression</h2>
   <div>
-    <button id="reset">Reset</button>
-    <button id="random">Random Points</button>
+    <h2>Interactive Linear Regression</h2>
+    <div>
+      <button id="reset">Reset</button>
+      <button id="random">Random Points</button>
+    </div>
+    <div id="container">
+      <svg id="plot" width="600" height="400"></svg>
+      <div id="table-container">
+        <table id="points-table">
+          <thead>
+            <tr><th>X</th><th>Y</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <p id="equation"></p>
   </div>
-  <svg id="plot" width="600" height="400"></svg>
-  <p id="equation"></p>
 
   <script>
     const svg = d3.select("#plot");
@@ -62,6 +79,7 @@
                   .attr("cx", xScale(d.x))
                   .attr("cy", yScale(d.y));
                 updateRegression();
+                updateTable();
               })
             ),
           update => update
@@ -71,6 +89,7 @@
         );
 
       updateRegression();
+      updateTable();
     }
 
     function updateRegression() {
@@ -104,6 +123,19 @@
       d3.select("#equation").text(`y = ${slope.toFixed(2)}x + ${intercept.toFixed(2)}`);
     }
 
+    function updateTable() {
+      const tbody = d3.select("#points-table tbody");
+      const rows = tbody.selectAll("tr").data(points, d => d.id);
+
+      rows.join(
+        enter => enter.append("tr")
+          .html(d => `<td>${d.x.toFixed(1)}</td><td>${d.y.toFixed(1)}</td>`),
+        update => update
+          .html(d => `<td>${d.x.toFixed(1)}</td><td>${d.y.toFixed(1)}</td>`),
+        exit => exit.remove()
+      );
+    }
+
     svg.on("click", function(event) {
       const [offsetX, offsetY] = d3.pointer(event);
       if (event.target.tagName === "circle") return;
@@ -135,3 +167,4 @@
   </script>
 </body>
 </html>
+
