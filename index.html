@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Interactive Linear Regression</title>
+  <title>Interactive Linear Regression with Axes</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     body { font-family: sans-serif; text-align: center; }
-    #plot { border: 1px solid #ccc; margin: 20px auto; }
-    .point { cursor: grab; }
+    #plot { border: 1px solid #ccc; margin: 20px auto; background: #fafafa; }
+    .point { cursor: grab; fill: crimson; }
     .line { stroke: steelblue; stroke-width: 2; }
+    .axis path, .axis line { stroke: #888; }
   </style>
 </head>
 <body>
@@ -22,33 +23,50 @@
 
   <script>
     const svg = d3.select("#plot");
-    const width = +svg.attr("width");
-    const height = +svg.attr("height");
+    const width = +svg.attr("width") - 60;
+    const height = +svg.attr("height") - 60;
+    const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+
+    const plotArea = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
     let points = [];
 
-    const xScale = d3.scaleLinear().domain([0, width]).range([0, width]);
-    const yScale = d3.scaleLinear().domain([0, height]).range([height, 0]);
+    const xScale = d3.scaleLinear().domain([0, 600]).range([0, width]);
+    const yScale = d3.scaleLinear().domain([0, 400]).range([height, 0]);
+
+    const xAxis = d3.axisBottom(xScale);
+    const yAxis = d3.axisLeft(yScale);
+
+    plotArea.append("g")
+      .attr("class", "x axis")
+      .attr("transform", `translate(0,${height})`)
+      .call(xAxis);
+
+    plotArea.append("g")
+      .attr("class", "y axis")
+      .call(yAxis);
 
     function render() {
-      svg.selectAll(".point").data(points, d => d.id)
+      plotArea.selectAll(".point").data(points, d => d.id)
         .join(
           enter => enter.append("circle")
             .attr("class", "point")
             .attr("r", 5)
-            .attr("cx", d => d.x)
-            .attr("cy", d => d.y)
+            .attr("cx", d => xScale(d.x))
+            .attr("cy", d => yScale(d.y))
             .call(d3.drag()
               .on("drag", function(event, d) {
-                d.x = Math.max(0, Math.min(width, event.x));
-                d.y = Math.max(0, Math.min(height, event.y));
-                d3.select(this).attr("cx", d.x).attr("cy", d.y);
+                d.x = Math.max(0, Math.min(600, xScale.invert(event.x)));
+                d.y = Math.max(0, Math.min(400, yScale.invert(event.y)));
+                d3.select(this)
+                  .attr("cx", xScale(d.x))
+                  .attr("cy", yScale(d.y));
                 updateRegression();
               })
             ),
           update => update
-            .attr("cx", d => d.x)
-            .attr("cy", d => d.y),
+            .attr("cx", d => xScale(d.x))
+            .attr("cy", d => yScale(d.y)),
           exit => exit.remove()
         );
 
@@ -57,7 +75,7 @@
 
     function updateRegression() {
       if (points.length < 2) {
-        svg.selectAll(".line").remove();
+        plotArea.selectAll(".line").remove();
         d3.select("#equation").text("");
         return;
       }
@@ -72,23 +90,29 @@
 
       const x1 = 0;
       const y1 = slope * x1 + intercept;
-      const x2 = width;
+      const x2 = 600;
       const y2 = slope * x2 + intercept;
 
-      svg.selectAll(".line").data([null])
+      plotArea.selectAll(".line").data([null])
         .join("line")
         .attr("class", "line")
-        .attr("x1", x1)
-        .attr("y1", y1)
-        .attr("x2", x2)
-        .attr("y2", y2);
+        .attr("x1", xScale(x1))
+        .attr("y1", yScale(y1))
+        .attr("x2", xScale(x2))
+        .attr("y2", yScale(y2));
 
       d3.select("#equation").text(`y = ${slope.toFixed(2)}x + ${intercept.toFixed(2)}`);
     }
 
     svg.on("click", function(event) {
-      const [x, y] = d3.pointer(event);
+      const [offsetX, offsetY] = d3.pointer(event);
       if (event.target.tagName === "circle") return;
+
+      const x = xScale.invert(offsetX - margin.left);
+      const y = yScale.invert(offsetY - margin.top);
+
+      if (x < 0 || x > 600 || y < 0 || y > 400) return;
+
       points.push({ id: Date.now() + Math.random(), x, y });
       render();
     });
@@ -101,8 +125,8 @@
     d3.select("#random").on("click", () => {
       points = d3.range(10).map(() => ({
         id: Date.now() + Math.random(),
-        x: Math.random() * width,
-        y: Math.random() * height
+        x: Math.random() * 600,
+        y: Math.random() * 400
       }));
       render();
     });
