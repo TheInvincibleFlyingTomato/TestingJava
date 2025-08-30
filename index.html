@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Interactive Linear Regression with Axes & Data Table TEST</title>
+  <title>Interactive Linear Regression with Axes & Data Table</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     body { font-family: sans-serif; text-align: center; display: flex; justify-content: center; }
@@ -19,7 +19,7 @@
 </head>
 <body>
   <div>
-    <h2>Interactive Linear Regression TEST</h2>
+    <h2>Interactive Linear Regression</h2>
     <div>
       <button id="reset">Reset</button>
       <button id="random">Random Points</button>
@@ -73,10 +73,12 @@
             .attr("cy", d => yScale(d.y))
             .call(d3.drag()
               .on("drag", function(event, d) {
-                // Correct the drag logic to adjust position based on scale and mouse position
                 const [x, y] = d3.pointer(event);
-                d.x = Math.max(0, Math.min(600, xScale.invert(x)));
-                d.y = Math.max(0, Math.min(400, yScale.invert(y)));
+                // Correct the drag logic to adjust position based on scale and mouse position
+                const newX = Math.max(0, Math.min(600, xScale.invert(x)));
+                const newY = Math.max(0, Math.min(400, yScale.invert(y)));
+                d.x = newX;
+                d.y = newY;
                 d3.select(this).attr("cx", xScale(d.x)).attr("cy", yScale(d.y));
                 updateRegression();
                 updateTable();
@@ -167,3 +169,4 @@
   </script>
 </body>
 </html>
+
