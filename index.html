@@ -72,16 +72,20 @@
             .attr("cx", d => xScale(d.x))
             .attr("cy", d => yScale(d.y))
             .call(d3.drag()
+              .on("start", function(event, d) {
+                d3.select(this).raise().attr("stroke", "black");
+              })
               .on("drag", function(event, d) {
+                // Update the point's coordinates
                 const [x, y] = d3.pointer(event);
-                // Correct the drag logic to adjust position based on scale and mouse position
-                const newX = Math.max(0, Math.min(600, xScale.invert(x)));
-                const newY = Math.max(0, Math.min(400, yScale.invert(y)));
-                d.x = newX;
-                d.y = newY;
+                d.x = Math.max(0, Math.min(600, xScale.invert(x)));
+                d.y = Math.max(0, Math.min(400, yScale.invert(y)));
                 d3.select(this).attr("cx", xScale(d.x)).attr("cy", yScale(d.y));
                 updateRegression();
                 updateTable();
+              })
+              .on("end", function(event, d) {
+                d3.select(this).attr("stroke", null);
               })
             ),
           update => update
@@ -169,4 +173,3 @@
   </script>
 </body>
 </html>
-
