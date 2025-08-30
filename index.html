@@ -73,11 +73,11 @@
             .attr("cy", d => yScale(d.y))
             .call(d3.drag()
               .on("drag", function(event, d) {
-                d.x = Math.max(0, Math.min(600, xScale.invert(event.x)));
-                d.y = Math.max(0, Math.min(400, yScale.invert(event.y)));
-                d3.select(this)
-                  .attr("cx", xScale(d.x))
-                  .attr("cy", yScale(d.y));
+                // Correct the drag logic to adjust position based on scale and mouse position
+                const [x, y] = d3.pointer(event);
+                d.x = Math.max(0, Math.min(600, xScale.invert(x)));
+                d.y = Math.max(0, Math.min(400, yScale.invert(y)));
+                d3.select(this).attr("cx", xScale(d.x)).attr("cy", yScale(d.y));
                 updateRegression();
                 updateTable();
               })
@@ -167,4 +167,3 @@
   </script>
 </body>
 </html>
-
