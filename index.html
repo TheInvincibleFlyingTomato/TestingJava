@@ -19,7 +19,7 @@
 </head>
 <body>
   <div>
-    <h2>Interactive Linear Regression TEST</h2>
+    <h2>Interactive Linear Regression</h2>
     <div>
       <button id="reset">Reset</button>
       <button id="random">Random Points</button>
@@ -76,17 +76,20 @@
                 d3.select(this).raise().attr("stroke", "black");
               })
               .on("drag", function(event, d) {
-                // Adjust the position based on mouse coordinates directly
+                // Adjust position relative to the plot
                 const [mouseX, mouseY] = d3.pointer(event);
-                
-                // Correct to the plot scale (taking into account margins)
+
+                // Calculate the new point coordinates
                 const newX = Math.max(0, Math.min(600, xScale.invert(mouseX)));
                 const newY = Math.max(0, Math.min(400, yScale.invert(mouseY)));
 
                 d.x = newX;
                 d.y = newY;
 
+                // Update the circle position
                 d3.select(this).attr("cx", xScale(d.x)).attr("cy", yScale(d.y));
+
+                // Recalculate and update the regression line and table
                 updateRegression();
                 updateTable();
               })
@@ -122,4 +125,60 @@
       const x1 = 0;
       const y1 = slope * x1 + intercept;
       const x2 = 600;
-      co
+      const y2 = slope * x2 + intercept;
+
+      plotArea.selectAll(".line").data([null])
+        .join("line")
+        .attr("class", "line")
+        .attr("x1", xScale(x1))
+        .attr("y1", yScale(y1))
+        .attr("x2", xScale(x2))
+        .attr("y2", yScale(y2));
+
+      d3.select("#equation").text(`y = ${slope.toFixed(2)}x + ${intercept.toFixed(2)}`);
+    }
+
+    function updateTable() {
+      const tbody = d3.select("#points-table tbody");
+      const rows = tbody.selectAll("tr").data(points, d => d.id);
+
+      rows.join(
+        enter => enter.append("tr")
+          .html(d => `<td>${d.x.toFixed(1)}</td><td>${d.y.toFixed(1)}</td>`),
+        update => update
+          .html(d => `<td>${d.x.toFixed(1)}</td><td>${d.y.toFixed(1)}</td>`),
+        exit => exit.remove()
+      );
+    }
+
+    svg.on("click", function(event) {
+      const [offsetX, offsetY] = d3.pointer(event);
+      if (event.target.tagName === "circle") return;
+
+      const x = xScale.invert(offsetX - margin.left);
+      const y = yScale.invert(offsetY - margin.top);
+
+      if (x < 0 || x > 600 || y < 0 || y > 400) return;
+
+      points.push({ id: Date.now() + Math.random(), x, y });
+      render();
+    });
+
+    d3.select("#reset").on("click", () => {
+      points = [];
+      render();
+    });
+
+    d3.select("#random").on("click", () => {
+      points = d3.range(10).map(() => ({
+        id: Date.now() + Math.random(),
+        x: Math.random() * 600,
+        y: Math.random() * 400
+      }));
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
