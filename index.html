@@ -192,8 +192,8 @@ th { background: #f0f0f0; position: sticky; top: 0; }
 
     // Arrowhead lines (two small lines at an angle)
     const angle=Math.atan2(w,u);
-    const leftAngle=angle + Math.PI*0.75; // 135 deg from main line
-    const rightAngle=angle - Math.PI*0.75;
+    const leftAngle=angle + Math.PI*0.25; // 45 deg from main line
+    const rightAngle=angle - Math.PI*0.25;
     const leftX=v.a+u-headSize*Math.cos(leftAngle);
     const leftY=v.b+w-headSize*Math.sin(leftAngle);
     const rightX=v.a+u-headSize*Math.cos(rightAngle);
