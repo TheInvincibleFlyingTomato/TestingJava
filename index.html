@@ -167,13 +167,38 @@ function plotGDPoint(){
     ]);
 }
 
+function computeR2(a, b) {
+    const yPred = dataset.map(p => g(a, b, p.x));
+    const yMean = dataset.reduce((sum, p) => sum + p.y, 0) / dataset.length;
+
+    let ssRes = 0, ssTot = 0;
+    dataset.forEach((p, i) => {
+        ssRes += Math.pow(p.y - yPred[i], 2);
+        ssTot += Math.pow(p.y - yMean, 2);
+    });
+
+    return 1 - (ssRes / ssTot);
+}
+
 function plot2DCurrentCurve(){
-    const yVals = xLine.map(x=>g(gdPoint.a,gdPoint.b,x));
+    const yVals = xLine.map(x => g(gdPoint.a, gdPoint.b, x));
+    const r2 = computeR2(gdPoint.a, gdPoint.b);
+
     Plotly.react("function2D",[
         {type:"scatter",mode:"markers",x:dataset.map(p=>p.x),y:dataset.map(p=>p.y),marker:{color:"black",size:8}},
         {type:"scatter",mode:"lines",x:xLine,y:yVals,line:{color:"red"}}
-    ],layout2D);
+    ],{
+        ...layout2D,
+        annotations: [{
+            x: 1, y: Math.max(...dataset.map(p=>p.y)),
+            xref: "x", yref: "y",
+            text: `a=${gdPoint.a.toFixed(3)}, b=${gdPoint.b.toFixed(3)}, R²=${r2.toFixed(4)}`,
+            showarrow: false,
+            font: {size: 14, color: "blue"}
+        }]
+    });
 }
+
 
 // --- Step button ---
 let stepCount = 0;  // track number of steps
