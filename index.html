@@ -153,7 +153,7 @@
     }
     Plotly.newPlot("vectorField", [arrows], {title:"Vector Field (u,v)", xaxis:{scaleanchor:"y"}, yaxis:{scaleanchor:"x"}});
 
-  //---------------------------------
+   //---------------------------------
   // 3. Function + Sample Points
   //---------------------------------
   let xLine = math.range(-10, 10, 0.1).toArray();
@@ -180,34 +180,13 @@
   let layout2D = {
     title: "2D Function g(x)",
     dragmode: false,
-    xaxis: { range: [-10, 10] },
-    yaxis: { range: [-10, 10] }
+    xaxis: { range: [0, 10] },   // put 0 near bottom-left
+    yaxis: { range: [0, 20] }    // adjust as needed for your g(x)
   };
 
   Plotly.newPlot("function2D", [funcTrace, pointsTrace], layout2D);
 
   let dataset = [];
-
-  // Convert raw click (pixels) to axis coordinates
-  document.getElementById("function2D").addEventListener("click", function(evt) {
-    let bb = this.getBoundingClientRect();
-    let xPixel = evt.clientX - bb.left;
-    let yPixel = evt.clientY - bb.top;
-
-    let xaxis = document.getElementById("function2D")._fullLayout.xaxis;
-    let yaxis = document.getElementById("function2D")._fullLayout.yaxis;
-
-    let xVal = xaxis.p2c ? xaxis.c2d(xaxis.p2l(xPixel)) : xaxis.p2c(xPixel);
-    let yVal = yaxis.p2c ? yaxis.c2d(yaxis.p2l(yPixel)) : yaxis.p2c(yPixel);
-
-    if (xVal !== undefined && yVal !== undefined) {
-      dataset.push({ x: xVal, y: yVal });
-      pointsTrace.x.push(xVal);
-      pointsTrace.y.push(yVal);
-      Plotly.redraw("function2D");
-      updateTable();
-    }
-  });
 
   function updateTable() {
     const tbody = document.querySelector("#pointsTable tbody");
@@ -219,6 +198,7 @@
     });
   }
 
+  // Reset button clears all points
   document.getElementById("resetBtn").onclick = () => {
     dataset = [];
     pointsTrace.x = [];
@@ -227,13 +207,14 @@
     updateTable();
   };
 
+  // Random button generates 6 random points (uniform in box)
   document.getElementById("randomBtn").onclick = () => {
     dataset = [];
     pointsTrace.x = [];
     pointsTrace.y = [];
-    for (let i = 0; i < 10; i++) {
-      let x = -10 + Math.random() * 20;
-      let y = -10 + Math.random() * 20;
+    for (let i = 0; i < 6; i++) {
+      let x = Math.random() * 10;   // within [0,10]
+      let y = Math.random() * 20;   // within [0,20]
       dataset.push({ x, y });
       pointsTrace.x.push(x);
       pointsTrace.y.push(y);
