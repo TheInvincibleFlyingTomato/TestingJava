@@ -31,7 +31,6 @@ th { background: #f0f0f0; position: sticky; top: 0; }
   <div id="leftSide">
     <div id="function2D"></div>
     <div id="controls">
-      <button id="resetBtn">Reset Points</button>
       <button id="randomBtn">Generate Random Points</button>
       <button id="stepBtn">+Step</button>
       <button id="step40Btn">+40 Steps</button>
@@ -337,7 +336,7 @@ document.getElementById("stepBtn").onclick = () => {
         const unitV = -dSdb / norm;
 
         // Step size decays as (0.25 * (0.9^n))
-        const stepSize = 0.25 * Math.pow(0.9, stepCount);
+        const stepSize = 0.3 * Math.pow(0.95, stepCount);
 
         // Update point
         gdPoint.a += stepSize * unitU;
@@ -374,7 +373,7 @@ document.getElementById("step40Btn").onclick = () => {
             const unitV = -dSdb / norm;
 
             // Step size decays as (0.25 * (0.9^n))
-            const stepSize = 0.25 * Math.pow(0.9, stepCount);
+            const stepSize = 0.3 * Math.pow(0.95, stepCount);
 
             gdPoint.a += stepSize * unitU;
             gdPoint.b += stepSize * unitV;
