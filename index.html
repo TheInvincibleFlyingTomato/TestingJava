@@ -226,22 +226,6 @@ let gdPoint={a:Math.random()*4+0.5,b:Math.random()*4+0.5};
 let trailX=[gdPoint.a], trailY=[gdPoint.b], trailZ=[computeSSE(gdPoint.a,gdPoint.b)];
 
 function plotGDPoint() {
-    const gd = document.getElementById("surfacePlot");
-
-    // Clone the existing layout so we don’t lose anything
-    let newLayout = gd.layout ? JSON.parse(JSON.stringify(gd.layout)) : {
-        scene: {
-            xaxis: { title: "a" },
-            yaxis: { title: "b" },
-            zaxis: { title: "SSE" }
-        }
-    };
-
-    // Preserve camera if it exists
-    if (gd.layout && gd.layout.scene && gd.layout.scene.camera) {
-        newLayout.scene.camera = gd.layout.scene.camera;
-    }
-
     const surfaceTrace = {
         type: "surface",
         x: aVals,
@@ -261,7 +245,16 @@ function plotGDPoint() {
         line: { color: "red", width: 3 }
     };
 
-    Plotly.react("surfacePlot", [surfaceTrace, gdTrace], newLayout);
+    Plotly.react("surfacePlot", [surfaceTrace, gdTrace], {
+        scene: {
+            xaxis: { title: "a" },
+            yaxis: { title: "b" },
+            zaxis: { title: "SSE" },
+            camera: {
+                eye: { x: 0, y: 0, z: 2 }   // top-down view from above
+            }
+        }
+    });
 }
 
 
