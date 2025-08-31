@@ -33,14 +33,14 @@
     //-------------------------------
 
     // Multivariable function f(x,y)
-    const f = math.parse("sin(sqrt(x^2 + y^2))").compile();
+    const f = math.parse("(x+yln(3)-5)^2").compile();
 
     // Vector field (u,v)
     const uExpr = math.parse("-y").compile();  // dx component
     const vExpr = math.parse("x").compile();   // dy component
 
     // 2D function g(x)
-    const g = math.parse("cos(x)").compile();
+    const g = math.parse("3*x^2.718").compile();
 
     //-------------------------------
     // 1. 3D Surface Plot
