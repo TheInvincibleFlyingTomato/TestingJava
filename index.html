@@ -149,80 +149,88 @@ th { background: #f0f0f0; position: sticky; top: 0; }
   }
 
   // --- 5. Gradient vector field ---
-  function plotGradientField() {
-    let gradX=[], mags=[];
+function plotGradientField() {
+  let gradX = [];
+  let mags = [];
 
-    // Compute gradients
-    for(let i=0;i<aVals.length;i++){
-      for(let j=0;j<bVals.length;j++){
-        const a=aVals[i], b=bVals[j];
-        let dSda=0, dSdb=0;
-        dataset.forEach(p=>{
-          const fx=g(a,b,p.x);
-          dSda += 2*(fx-p.y)*dfda(a,b,p.x);
-          dSdb += 2*(fx-p.y)*dfdb(a,b,p.x);
-        });
-        const mag = Math.sqrt(dSda*dSda + dSdb*dSdb);
-        gradX.push({a,b,u:dSda,v:dSdb,mag});
-        mags.push(mag);
-      }
+  // --- 1. Compute gradients and magnitudes ---
+  for (let i = 0; i < aVals.length; i++) {
+    for (let j = 0; j < bVals.length; j++) {
+      const a = aVals[i], b = bVals[j];
+      let dSda = 0, dSdb = 0;
+      dataset.forEach(p => {
+        const fx = g(a, b, p.x);
+        dSda += 2 * (fx - p.y) * dfda(a, b, p.x);
+        dSdb += 2 * (fx - p.y) * dfdb(a, b, p.x);
+      });
+      const mag = Math.sqrt(dSda * dSda + dSdb * dSdb);
+      gradX.push({ a, b, u: dSda, v: dSdb, mag });
+      mags.push(mag);
     }
-
-    mags.sort((a,b)=>a-b);
-    const minMag = mags[0];
-    const maxMag = mags[Math.floor(0.9*mags.length)] || mags[mags.length-1];
-
-    // Vector scale and arrowhead size
-    let scale=0.35;
-    if(Math.max(...mags)>50) scale=0.18;
-    else if(Math.max(...mags)<5) scale=0.4;
-    const headSize=0.1;
-
-    const arrows={type:"scatter",mode:"lines",x:[],y:[],line:{width:2,color:""}};
-
-    gradX.forEach(v=>{
-      const norm = Math.sqrt(v.u*v.u + v.v*v.v);
-      if(norm===0) return;
-
-      const u=-scale*v.u/norm;
-      const w=-scale*v.v/norm;
-
-      let t=(v.mag-minMag)/(maxMag-minMag+1e-6);
-      t=Math.min(Math.max(t,0),1);
-      t=Math.pow(t,0.7);
-      const r=Math.floor(255*t), g=0, b=Math.floor(255*(1-t));
-      const color=`rgb(${r},${g},${b})`;
-
-      // Main line
-      arrows.x.push(v.a, v.a+u, null);
-      arrows.y.push(v.b, v.b+w, null);
-      arrows.line.color=color;
-
-      // Arrowheads ±45°
-      const angle=Math.atan2(w,u);
-      const leftAngle=angle+Math.PI/4;
-      const rightAngle=angle-Math.PI/4;
-      const leftX=v.a+u-headSize*Math.cos(leftAngle);
-      const leftY=v.b+w-headSize*Math.sin(leftAngle);
-      const rightX=v.a+u-headSize*Math.cos(rightAngle);
-      const rightY=v.b+w-headSize*Math.sin(rightAngle);
-
-      arrows.x.push(v.a+u,leftX,null);
-      arrows.y.push(v.b+w,leftY,null);
-      arrows.line.color=color;
-
-      arrows.x.push(v.a+u,rightX,null);
-      arrows.y.push(v.b+w,rightY,null);
-      arrows.line.color=color;
-    });
-
-    Plotly.newPlot("gradVectorField",[arrows],{
-      title:"Gradient Vector Field of SSE",
-      xaxis:{title:"a",range:[0,5],scaleanchor:"y"},
-      yaxis:{title:"b",range:[0,5],scaleanchor:"x"},
-      showlegend:false
-    });
   }
+
+  // --- 2. Compute 90th percentile for color scaling ---
+  mags.sort((a, b) => a - b);
+  const minMag = mags[0];
+  const maxMag = mags[Math.floor(0.9 * mags.length)] || mags[mags.length - 1];
+
+  // --- 3. Determine scaling so vectors fit inside 0-5 axes ---
+  const maxArrowLength = 0.35; // max vector length relative to axis range
+  const maxGrad = Math.max(...mags);
+  const scale = maxGrad > 0 ? maxArrowLength / maxGrad : 0.1;
+  const headSize = 0.08; // arrowhead size
+
+  const arrows = { type: "scatter", mode: "lines", x: [], y: [], line: { width: 2, color: "" } };
+
+  // --- 4. Draw each vector with arrowhead ---
+  gradX.forEach(v => {
+    const uRaw = v.u * scale;
+    const wRaw = v.v * scale;
+
+    // Invert vectors
+    const u = -uRaw;
+    const w = -wRaw;
+
+    // Color based on magnitude (log scaling)
+    let t = (v.mag - minMag) / (maxMag - minMag + 1e-6);
+    t = Math.min(Math.max(t, 0), 1);
+    t = Math.pow(t, 0.7);
+    const r = Math.floor(255 * t);
+    const gCol = 0;
+    const b = Math.floor(255 * (1 - t));
+    const color = `rgb(${r},${gCol},${b})`;
+
+    // Main vector line
+    arrows.x.push(v.a, v.a + u, null);
+    arrows.y.push(v.b, v.b + w, null);
+    arrows.line.color = color;
+
+    // Arrowheads ±45°
+    const angle = Math.atan2(w, u);
+    const leftAngle = angle + Math.PI / 4;
+    const rightAngle = angle - Math.PI / 4;
+
+    const leftX = v.a + u - headSize * Math.cos(leftAngle);
+    const leftY = v.b + w - headSize * Math.sin(leftAngle);
+    const rightX = v.a + u - headSize * Math.cos(rightAngle);
+    const rightY = v.b + w - headSize * Math.sin(rightAngle);
+
+    arrows.x.push(v.a + u, leftX, null);
+    arrows.y.push(v.b + w, leftY, null);
+    arrows.x.push(v.a + u, rightX, null);
+    arrows.y.push(v.b + w, rightY, null);
+    arrows.line.color = color;
+  });
+
+  // --- 5. Plot with fixed 0-5 axes ---
+  Plotly.newPlot("gradVectorField", [arrows], {
+    title: "Gradient Vector Field of SSE",
+    xaxis: { title: "a", range: [0, 5], scaleanchor: "y", constrain: "domain" },
+    yaxis: { title: "b", range: [0, 5], scaleanchor: "x", constrain: "domain" },
+    showlegend: false
+  });
+}
+
 
   // --- 6. Initial plot ---
   plotSSE();
