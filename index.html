@@ -153,10 +153,9 @@ th { background: #f0f0f0; position: sticky; top: 0; }
   }
 
   // --- 5. Gradient vector field (separate 2D graph) ---
-  function plotGradientField(){
+ function plotGradientField(){
   let gradX=[];
   let maxGrad=0;
-  // Compute gradients and find true max
   for(let i=0;i<aVals.length;i++){
     for(let j=0;j<bVals.length;j++){
       const a=aVals[i], b=bVals[j];
@@ -172,23 +171,40 @@ th { background: #f0f0f0; position: sticky; top: 0; }
     }
   }
 
-  // Prepare vectors
   const arrows={type:"scatter",mode:"lines",x:[],y:[],line:{width:2,color:""}};
-  const scale = 0.2; // smaller visual length
+  const scale=0.2;
+  const headSize=0.05; // size of arrowhead
   gradX.forEach(v=>{
-    const norm = Math.sqrt(v.u*v.u + v.v*v.v);
-    const u = scale*v.u/norm;
-    const w = scale*v.v/norm;
+    const norm=Math.sqrt(v.u*v.u + v.v*v.v);
+    const u=scale*v.u/norm;
+    const w=scale*v.v/norm;
 
-    // Non-linear color mapping: only top 25% get fully red
-    let t = v.mag/maxGrad;
-    t = Math.pow(t,2); // exaggerate differences
-    const r = Math.floor(255*t);
-    const b = Math.floor(255*(1-t));
-    const color = `rgb(${r},0,${b})`;
+    // Color mapping
+    let t=Math.pow(v.mag/maxGrad,2);
+    const r=Math.floor(255*t);
+    const b=Math.floor(255*(1-t));
+    const color=`rgb(${r},0,${b})`;
 
+    // Main arrow line
     arrows.x.push(v.a,v.a+u,null);
     arrows.y.push(v.b,v.b+w,null);
+    arrows.line.color=color;
+
+    // Arrowhead lines (two small lines at an angle)
+    const angle=Math.atan2(w,u);
+    const leftAngle=angle + Math.PI*0.75; // 135 deg from main line
+    const rightAngle=angle - Math.PI*0.75;
+    const leftX=v.a+u-headSize*Math.cos(leftAngle);
+    const leftY=v.b+w-headSize*Math.sin(leftAngle);
+    const rightX=v.a+u-headSize*Math.cos(rightAngle);
+    const rightY=v.b+w-headSize*Math.sin(rightAngle);
+
+    arrows.x.push(v.a+u,leftX,null);
+    arrows.y.push(v.b+w,leftY,null);
+    arrows.line.color=color;
+
+    arrows.x.push(v.a+u,rightX,null);
+    arrows.y.push(v.b+w,rightY,null);
     arrows.line.color=color;
   });
 
