@@ -239,11 +239,10 @@ function plotGradientField() {
         y: [gdPoint.b],
         marker: { size: 10, color: "black", symbol: "x" },
         showlegend: false
-    };
-
+        };
     Plotly.newPlot("gradVectorField", [...arrowTraces, trailTrace, currentPointTrace], {
-        xaxis: { range: [0, 5], scaleanchor: "y" },
-        yaxis: { range: [0, 5], scaleanchor: "x" },
+        xaxis: { range: [0, 5], autorange: false, scaleanchor: "y", title: "a" },
+        yaxis: { range: [0, 5], autorange: false, scaleanchor: "x", title: "b" },
         showlegend: false
     });
 }
