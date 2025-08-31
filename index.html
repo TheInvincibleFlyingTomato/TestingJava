@@ -167,6 +167,16 @@ function plotGDPoint(){
     ]);
 }
 
+function formatEquation(a, b) {
+    if (chosen === "A*B^x") {
+        return `y = ${a.toFixed(3)} * (${b.toFixed(3)})^x`;
+    } else if (chosen === "A*x^B") {
+        return `y = ${a.toFixed(3)} * x^(${b.toFixed(3)})`;
+    } else { // A*log(x)+B
+        return `y = ${a.toFixed(3)} * log(x) + ${b.toFixed(3)}`;
+    }
+}
+
 function computeR2(a, b) {
     const yPred = dataset.map(p => g(a, b, p.x));
     const yMean = dataset.reduce((sum, p) => sum + p.y, 0) / dataset.length;
@@ -180,24 +190,39 @@ function computeR2(a, b) {
     return 1 - (ssRes / ssTot);
 }
 
-function plot2DCurrentCurve(){
+function plot2DCurrentCurve() {
     const yVals = xLine.map(x => g(gdPoint.a, gdPoint.b, x));
     const r2 = computeR2(gdPoint.a, gdPoint.b);
+    const eqn = formatEquation(gdPoint.a, gdPoint.b);
 
-    Plotly.react("function2D",[
-        {type:"scatter",mode:"markers",x:dataset.map(p=>p.x),y:dataset.map(p=>p.y),marker:{color:"black",size:8}},
-        {type:"scatter",mode:"lines",x:xLine,y:yVals,line:{color:"red"}}
-    ],{
+    Plotly.react("function2D", [
+        {
+            type: "scatter",
+            mode: "markers",
+            x: dataset.map(p => p.x),
+            y: dataset.map(p => p.y),
+            marker: { color: "black", size: 8 }
+        },
+        {
+            type: "scatter",
+            mode: "lines",
+            x: xLine,
+            y: yVals,
+            line: { color: "red" }
+        }
+    ], {
         ...layout2D,
         annotations: [{
-            x: 1, y: Math.max(...dataset.map(p=>p.y)),
-            xref: "x", yref: "y",
-            text: `a=${gdPoint.a.toFixed(3)}, b=${gdPoint.b.toFixed(3)}, R²=${r2.toFixed(4)}`,
+            xref: "paper", yref: "paper",
+            x: 0.5, y: 1.15,  // centered above the plot
+            text: `${eqn}   |   R² = ${r2.toFixed(4)}`,
             showarrow: false,
-            font: {size: 14, color: "blue"}
+            font: { size: 16, color: "blue" },
+            align: "center"
         }]
     });
 }
+
 
 
 // --- Step button ---
