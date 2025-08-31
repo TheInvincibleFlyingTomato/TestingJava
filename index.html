@@ -139,25 +139,17 @@ function plotSSE(){
 
 // --- Gradient field ---
 function plotGradientField() {
-    let arrows = {
-        type: "scatter",
-        mode: "lines",
-        x: [],
-        y: [],
-        line: { width: 2 },
-        marker: { color: [] }
-    };
+    let arrowTraces = [];
+    const step = 0.25; // arrow length
 
-    const step = 0.25; // just controls arrow display length
+    // First compute magnitudes for color scaling
     let magnitudes = [];
-
-    // First compute all magnitudes
     for (let i = 0; i < aVals.length; i++) {
         for (let j = 0; j < bVals.length; j++) {
             let dSda = 0, dSdb = 0;
             dataset.forEach(p => {
                 const fx = g(aVals[i], bVals[j], p.x);
-                dSda += 2 * (fx - p.y) * dfda(aVals[i], bVals[j], p.x);
+                dSda += 2 * (fx - p.y) * dfda(aVals[i], aVals[j], p.x);
                 dSdb += 2 * (fx - p.y) * dfdb(aVals[i], bVals[j], p.x);
             });
             const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
@@ -165,7 +157,6 @@ function plotGradientField() {
         }
     }
 
-    // Scale colors based on relative magnitude
     const minMag = Math.min(...magnitudes);
     const maxMag = Math.max(...magnitudes);
 
@@ -178,19 +169,25 @@ function plotGradientField() {
                 dSda += 2 * (fx - p.y) * dfda(aVals[i], bVals[j], p.x);
                 dSdb += 2 * (fx - p.y) * dfdb(aVals[i], bVals[j], p.x);
             });
-            const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
-            if (norm === 0) continue;
 
-            const u = -dSda / norm * step; // normalized
+            const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
+            if (norm === 0) { k++; continue; }
+
+            const u = -dSda / norm * step;
             const v = -dSdb / norm * step;
 
-            arrows.x.push(aVals[i], aVals[i] + u, null);
-            arrows.y.push(bVals[j], bVals[j] + v, null);
-
-            // Color based on relative magnitude
             const ratio = (magnitudes[k] - minMag) / (maxMag - minMag + 1e-9);
-            const color = `rgb(${Math.round(255 * ratio)},0,${Math.round(255 * (1 - ratio))})`; // blue→red
-            arrows.marker.color.push(color, color, null);
+            const color = `rgb(${Math.round(255 * ratio)},0,${Math.round(255 * (1 - ratio))})`;
+
+            // Each arrow is a separate trace
+            arrowTraces.push({
+                type: "scatter",
+                mode: "lines",
+                x: [aVals[i], aVals[i] + u],
+                y: [bVals[j], bVals[j] + v],
+                line: { color: color, width: 2 },
+                showlegend: false
+            });
 
             k++;
         }
@@ -203,7 +200,8 @@ function plotGradientField() {
         x: trailX,
         y: trailY,
         line: { color: "red", width: 3 },
-        marker: { size: 5, color: "red" }
+        marker: { size: 5, color: "red" },
+        showlegend: false
     };
 
     const currentPointTrace = {
@@ -212,16 +210,15 @@ function plotGradientField() {
         x: [gdPoint.a],
         y: [gdPoint.b],
         marker: { size: 10, color: "black", symbol: "x" },
-        name: "Current Point"
+        showlegend: false
     };
 
-    Plotly.newPlot("gradVectorField", [arrows, trailTrace, currentPointTrace], {
+    Plotly.newPlot("gradVectorField", [...arrowTraces, trailTrace, currentPointTrace], {
         xaxis: { range: [0, 5], scaleanchor: "y" },
         yaxis: { range: [0, 5], scaleanchor: "x" },
         showlegend: false
     });
 }
-
 
 // --- Gradient Descent point with trail ---
 let gdPoint={a:Math.random()*4+0.5,b:Math.random()*4+0.5};
