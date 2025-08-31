@@ -34,7 +34,6 @@ th { background: #f0f0f0; position: sticky; top: 0; }
       <div id="function2D" style="flex:1;"></div>
     </div>
     <div id="controls">
-      <button id="resetBtn">Reset Points</button>
       <button id="randomBtn">Generate Random Points</button>
       <button id="stepBtn">+Step</button>
       <button id="step40Btn">+40 Steps</button>
@@ -289,12 +288,12 @@ function plot2DCurrentCurve() {
     const r2 = computeR2(gdPoint.a, gdPoint.b);
     const eqn = formatEquation(gdPoint.a, gdPoint.b);
 
-    // 1️⃣ Update the MathJax equation div
+    // Update the MathJax equation div
     const eqDiv = document.getElementById("equationDisplay");
     eqDiv.innerHTML = `\\(${eqn},\\; R^2 = ${r2.toFixed(4)}\\)`;
     MathJax.typesetPromise();
 
-    // 2️⃣ Update the 2D plot
+    // Update the 2D plot
     Plotly.react("function2D", [
         {
             type: "scatter",
@@ -393,6 +392,25 @@ document.getElementById("step40Btn").onclick = () => {
         }
     }, 150); // delay in ms per step (0.3s)
 };
+ document.getElementById("randomBtn").onclick = () => {
+    // 1️⃣ Regenerate dataset points
+    generatePoints();
+    updateTable();
+
+    // 2️⃣ Reset GD point and trail
+    gdPoint = { a: Math.random() * 4 + 0.5, b: Math.random() * 4 + 0.5 };
+    trailX = [gdPoint.a];
+    trailY = [gdPoint.b];
+    trailZ = [computeSSE(gdPoint.a, gdPoint.b)];
+    stepCount = 0;
+
+    // 3️⃣ Update plots
+    plotSSE();            // regenerate 3D surface
+    plotGradientField();  // regenerate vector field
+    plotGDPoint();        // plot GD point on surface
+    plot2DCurrentCurve(); // plot 2D curve with new points
+};
+ 
 
 
 // --- Initial plots ---
