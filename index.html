@@ -140,16 +140,16 @@ function plotSSE(){
 // --- Gradient field ---
 function plotGradientField() {
     let arrowTraces = [];
-    const step = 0.25; // arrow length
+    const step = 0.15; // shorter arrows
 
-    // First compute magnitudes for color scaling
+    // Compute magnitudes for color scaling
     let magnitudes = [];
     for (let i = 0; i < aVals.length; i++) {
         for (let j = 0; j < bVals.length; j++) {
             let dSda = 0, dSdb = 0;
             dataset.forEach(p => {
                 const fx = g(aVals[i], bVals[j], p.x);
-                dSda += 2 * (fx - p.y) * dfda(aVals[i], aVals[j], p.x);
+                dSda += 2 * (fx - p.y) * dfda(aVals[i], bVals[j], p.x);
                 dSdb += 2 * (fx - p.y) * dfdb(aVals[i], bVals[j], p.x);
             });
             const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
@@ -176,15 +176,43 @@ function plotGradientField() {
             const u = -dSda / norm * step;
             const v = -dSdb / norm * step;
 
-            const ratio = (magnitudes[k] - minMag) / (maxMag - minMag + 1e-9);
+            // Dramatic color: exaggerate contrast
+            let ratio = (magnitudes[k] - minMag) / (maxMag - minMag + 1e-9);
+            ratio = Math.pow(ratio, 0.5); // make colors more dramatic
             const color = `rgb(${Math.round(255 * ratio)},0,${Math.round(255 * (1 - ratio))})`;
 
-            // Each arrow is a separate trace
+            // Main arrow line
             arrowTraces.push({
                 type: "scatter",
                 mode: "lines",
                 x: [aVals[i], aVals[i] + u],
                 y: [bVals[j], bVals[j] + v],
+                line: { color: color, width: 2 },
+                showlegend: false
+            });
+
+            // Arrowhead (small triangle/line at end)
+            const headSize = 0.05;
+            const angle = Math.atan2(v, u);
+            const left = angle + Math.PI * 0.75;
+            const right = angle - Math.PI * 0.75;
+
+            const xHead = [
+                aVals[i] + u,
+                aVals[i] + u - headSize * Math.cos(left),
+                aVals[i] + u - headSize * Math.cos(right)
+            ];
+            const yHead = [
+                bVals[j] + v,
+                bVals[j] + v - headSize * Math.sin(left),
+                bVals[j] + v - headSize * Math.sin(right)
+            ];
+
+            arrowTraces.push({
+                type: "scatter",
+                mode: "lines",
+                x: [xHead[0], xHead[1], null, xHead[0], xHead[2]],
+                y: [yHead[0], yHead[1], null, yHead[0], yHead[2]],
                 line: { color: color, width: 2 },
                 showlegend: false
             });
