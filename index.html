@@ -111,7 +111,7 @@
 
   // Determine x-range
   let xStart = chosen.includes("log(x)") ? 1 : 0;
-  let xEnd = 10;
+  let xEnd = 6;
 
   const xLine = math.range(xStart, xEnd, 0.1).toArray();
   const yLine = xLine.map(x => g.evaluate({x}));
