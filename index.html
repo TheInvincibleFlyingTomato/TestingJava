@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Regression SSE Surface + Gradient Field</title>
+<title>Regression SSE Surface + Gradient Descent</title>
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
 <style>
@@ -41,6 +41,7 @@ th { background: #f0f0f0; position: sticky; top: 0; }
     <div id="controls">
       <button id="resetBtn">Reset Points</button>
       <button id="randomBtn">Generate 10 Random Points</button>
+      <button id="stepBtn">+Step</button>
     </div>
   </div>
   <div id="rightSide">
@@ -97,19 +98,17 @@ th { background: #f0f0f0; position: sticky; top: 0; }
   }
   generatePoints();
 
-  // --- 3. 2D plot of points (curve hidden) ---
+  // --- 3. 2D plot of points ---
   const xLine=[];
-  for(let x=xStart;x<=xEnd;x+=0.1) xLine.push(xLine.push(x));
-  const yLine = xLine.map(x=>g(parseFloat(A0),parseFloat(B0),x));
+  for(let x=xStart;x<=xEnd;x+=0.1) xLine.push(x);
 
-  const funcTrace={type:"scatter",mode:"lines",x:xLine,y:yLine,line:{color:"red"},name:"",visible:false};
   const pointsTrace={type:"scatter",mode:"markers",x:dataset.map(p=>p.x),y:dataset.map(p=>p.y),marker:{color:"black",size:8},name:"Sample Points"};
 
-  const layout2D={title:"",dragmode:false,
+  const layout2D={title:`2D Function`,dragmode:false,
                   xaxis:{range:[xStart,xEnd]},
                   yaxis:{range:[Math.min(...dataset.map(p=>p.y))-1,Math.max(...dataset.map(p=>p.y))+1]}};
 
-  Plotly.newPlot("function2D",[funcTrace,pointsTrace],layout2D);
+  Plotly.newPlot("function2D",[pointsTrace],layout2D);
 
   function updateTable(){
     const tbody=document.querySelector("#pointsTable tbody");
@@ -128,136 +127,158 @@ th { background: #f0f0f0; position: sticky; top: 0; }
   const aVals=math.range(aMin,aMax,aStep).toArray();
   const bVals=math.range(bMin,bMax,bStep).toArray();
 
-  function plotSSE(){
-    let zValues=[];
-    for(let i=0;i<aVals.length;i++){
-      const row=[];
-      for(let j=0;j<bVals.length;j++){
-        const a=aVals[i], b=bVals[j];
-        let sse=0;
-        dataset.forEach(p=>{
-          const fx=g(a,b,p.x);
-          sse += Math.pow(fx-p.y,2);
-        });
-        row.push(sse);
-      }
-      zValues.push(row);
+  function computeSSE(a,b){
+    let sse=0;
+    dataset.forEach(p=>{ sse += Math.pow(g(a,b,p.x)-p.y,2); });
+    return sse;
+  }
+
+  function plotSSE(gdPoint=null, trail=[]){
+    const zValues = aVals.map(a=> bVals.map(b=> computeSSE(a,b)));
+    const traces=[{
+      type:"surface", x:aVals, y:bVals, z:zValues,
+      colorscale:"Viridis", opacity:0.9, name:"SSE Surface"
+    }];
+
+    if(gdPoint){
+      // GD point
+      traces.push({
+        type:"scatter3d", mode:"markers+lines",
+        x:[...trail.map(t=>t.a), gdPoint.a],
+        y:[...trail.map(t=>t.b), gdPoint.b],
+        z:[...trail.map(t=>computeSSE(t.a,t.b)), computeSSE(gdPoint.a, gdPoint.b)],
+        marker:{color:"magenta", size:5},
+        line:{color:"magenta", width:2},
+        name:"GD Point"
+      });
     }
-    Plotly.newPlot("surfacePlot",[{
-      type:"surface",x:aVals,y:bVals,z:zValues,colorscale:"Viridis",opacity:0.9,name:"SSE Surface"
-    }],{title:`SSE Surface for ${chosen}`,scene:{xaxis:{title:"a"},yaxis:{title:"b"},zaxis:{title:"SSE"}}});
+
+    Plotly.newPlot("surfacePlot", traces, {scene:{xaxis:{title:"a"},yaxis:{title:"b"},zaxis:{title:"SSE"}}});
   }
 
   // --- 5. Gradient vector field ---
-function plotGradientField() {
-  let gradX = [];
-  let mags = [];
-
-  // --- 1. Compute gradients and magnitudes ---
-  for (let i = 0; i < aVals.length; i++) {
-    for (let j = 0; j < bVals.length; j++) {
-      const a = aVals[i], b = bVals[j];
-      let dSda = 0, dSdb = 0;
-      dataset.forEach(p => {
-        const fx = g(a, b, p.x);
-        dSda += 2 * (fx - p.y) * dfda(a, b, p.x);
-        dSdb += 2 * (fx - p.y) * dfdb(a, b, p.x);
-      });
-      const mag = Math.sqrt(dSda * dSda + dSdb * dSdb);
-      gradX.push({ a, b, u: dSda, v: dSdb, mag });
-      mags.push(mag);
+  function plotGradientField(gdPoint=null){
+    let gradX = [];
+    let mags = [];
+    for(let i=0;i<aVals.length;i++){
+      for(let j=0;j<bVals.length;j++){
+        const a=aVals[i], b=bVals[j];
+        let dSda=0, dSdb=0;
+        dataset.forEach(p=>{
+          const fx=g(a,b,p.x);
+          dSda += 2*(fx-p.y)*dfda(a,b,p.x);
+          dSdb += 2*(fx-p.y)*dfdb(a,b,p.x);
+        });
+        const mag=Math.sqrt(dSda*dSda+dSdb*dSdb);
+        gradX.push({a,b,u:dSda,v:dSdb,mag});
+        mags.push(mag);
+      }
     }
+
+    mags.sort((a,b)=>a-b);
+    const minMag=mags[0];
+    const maxMag=mags[Math.floor(0.9*mags.length)] || mags[mags.length-1];
+    let scale=0.25;
+    const arrows={type:"scatter",mode:"lines",x:[],y:[],line:{width:2,color:""}};
+
+    gradX.forEach(v=>{
+      const norm=Math.sqrt(v.u*v.u+v.v*v.v);
+      if(norm===0) return;
+      const u=-scale*v.u/norm;
+      const w=-scale*v.v/norm;
+
+      let t=(v.mag-minMag)/(maxMag-minMag+1e-6);
+      t=Math.min(Math.max(t,0),1);
+      t=Math.pow(t,0.7);
+      const r=Math.floor(255*t);
+      const g=0;
+      const b=Math.floor(255*(1-t));
+      const color=`rgb(${r},${g},${b})`;
+
+      arrows.x.push(v.a,v.a+u,null);
+      arrows.y.push(v.b,v.b+w,null);
+      arrows.line.color=color;
+    });
+
+    const traces=[arrows];
+    if(gdPoint){
+      traces.push({
+        type:"scatter", mode:"markers",
+        x:[gdPoint.a], y:[gdPoint.b],
+        marker:{color:"magenta", size:10},
+        name:"GD Point"
+      });
+    }
+
+    Plotly.newPlot("gradVectorField", traces, {
+      title:"Gradient Vector Field",
+      xaxis:{range:[0,5],scaleanchor:"y"},
+      yaxis:{range:[0,5],scaleanchor:"x"},
+      showlegend:false
+    });
   }
 
-  // --- 2. Compute 90th percentile for color scaling ---
-  mags.sort((a, b) => a - b);
-  const minMag = mags[0];
-  const maxMag = mags[Math.floor(0.9 * mags.length)] || mags[mags.length - 1];
+  // --- 6. Gradient Descent Point & Trail ---
+  let gdPoint = {a: Math.random()*5, b: Math.random()*5};
+  let trail = [];
+  const stepSize = 0.2;
 
-  // --- 3. Determine scaling so vectors fit inside 0-5 axes ---
-  const maxArrowLength = 0.35; // max vector length relative to axis range
-  const maxGrad = Math.max(...mags);
-  const scale = maxGrad > 0 ? maxArrowLength / maxGrad : 0.1;
-  const headSize = 0.08; // arrowhead size
+  function gradAt(a,b){
+    let dSda=0,dSdb=0;
+    dataset.forEach(p=>{
+      const fx=g(a,b,p.x);
+      dSda += 2*(fx-p.y)*dfda(a,b,p.x);
+      dSdb += 2*(fx-p.y)*dfdb(a,b,p.x);
+    });
+    return {dSda,dSdb};
+  }
 
-  const arrows = { type: "scatter", mode: "lines", x: [], y: [], line: { width: 2, color: "" } };
+  function updateGD(){
+    plotSSE(gdPoint, trail);
+    plotGradientField(gdPoint);
+    // update 2D function plot
+    const currentY = xLine.map(x => g(gdPoint.a, gdPoint.b, x));
+    Plotly.react("function2D", [{
+      type:"scatter", mode:"markers",
+      x:dataset.map(p=>p.x),
+      y:dataset.map(p=>p.y),
+      marker:{color:"black",size:8}
+    },{
+      type:"scatter", mode:"lines",
+      x:xLine,
+      y:currentY,
+      line:{color:"blue"}
+    }], layout2D);
+  }
 
-  // --- 4. Draw each vector with arrowhead ---
-  gradX.forEach(v => {
-    const uRaw = v.u * scale;
-    const wRaw = v.v * scale;
+  document.getElementById("stepBtn").onclick = ()=>{
+    const grad = gradAt(gdPoint.a, gdPoint.b);
+    trail.push({...gdPoint});
+    gdPoint.a -= stepSize * grad.dSda;
+    gdPoint.b -= stepSize * grad.dSdb;
+    gdPoint.a=Math.min(Math.max(gdPoint.a,0),5);
+    gdPoint.b=Math.min(Math.max(gdPoint.b,0),5);
+    updateGD();
+  };
 
-    // Invert vectors
-    const u = -uRaw;
-    const w = -wRaw;
-
-    // Color based on magnitude (log scaling)
-    let t = (v.mag - minMag) / (maxMag - minMag + 1e-6);
-    t = Math.min(Math.max(t, 0), 1);
-    t = Math.pow(t, 0.7);
-    const r = Math.floor(255 * t);
-    const gCol = 0;
-    const b = Math.floor(255 * (1 - t));
-    const color = `rgb(${r},${gCol},${b})`;
-
-    // Main vector line
-    arrows.x.push(v.a, v.a + u, null);
-    arrows.y.push(v.b, v.b + w, null);
-    arrows.line.color = color;
-
-    // Arrowheads ±45°
-    const angle = Math.atan2(w, u);
-    const leftAngle = angle + Math.PI / 4;
-    const rightAngle = angle - Math.PI / 4;
-
-    const leftX = v.a + u - headSize * Math.cos(leftAngle);
-    const leftY = v.b + w - headSize * Math.sin(leftAngle);
-    const rightX = v.a + u - headSize * Math.cos(rightAngle);
-    const rightY = v.b + w - headSize * Math.sin(rightAngle);
-
-    arrows.x.push(v.a + u, leftX, null);
-    arrows.y.push(v.b + w, leftY, null);
-    arrows.x.push(v.a + u, rightX, null);
-    arrows.y.push(v.b + w, rightY, null);
-    arrows.line.color = color;
-  });
-
-  // --- 5. Plot with fixed 0-5 axes ---
-  Plotly.newPlot("gradVectorField", [arrows], {
-    title: "Gradient Vector Field of SSE",
-    xaxis: { title: "a", range: [0, 5], scaleanchor: "y", constrain: "domain" },
-    yaxis: { title: "b", range: [0, 5], scaleanchor: "x", constrain: "domain" },
-    showlegend: false
-  });
-}
-
-
-  // --- 6. Initial plot ---
-  plotSSE();
-  plotGradientField();
-
-  // --- 7. Button handlers ---
   document.getElementById("resetBtn").onclick=()=>{
     generatePoints();
-    pointsTrace.x = dataset.map(p=>p.x);
-    pointsTrace.y = dataset.map(p=>p.y);
-    layout2D.yaxis.range=[Math.min(...dataset.map(p=>p.y))-1,Math.max(...dataset.map(p=>p.y))+1];
-    Plotly.react("function2D",[funcTrace,pointsTrace],layout2D);
     updateTable();
-    plotSSE();
-    plotGradientField();
+    trail=[];
+    gdPoint = {a: Math.random()*5, b: Math.random()*5};
+    updateGD();
   };
 
   document.getElementById("randomBtn").onclick=()=>{
     generatePoints();
-    pointsTrace.x = dataset.map(p=>p.x);
-    pointsTrace.y = dataset.map(p=>p.y);
-    layout2D.yaxis.range=[Math.min(...dataset.map(p=>p.y))-1,Math.max(...dataset.map(p=>p.y))+1];
-    Plotly.react("function2D",[funcTrace,pointsTrace],layout2D);
     updateTable();
-    plotSSE();
-    plotGradientField();
+    trail=[];
+    gdPoint = {a: Math.random()*5, b: Math.random()*5};
+    updateGD();
   };
+
+  // --- initial plots ---
+  updateGD();
 </script>
 </body>
 </html>
