@@ -98,7 +98,6 @@
   // ---------------------------
   const xLine = [];
   for(let x=xStart;x<=xEnd;x+=0.1) xLine.push(x);
-
   const yLine = xLine.map(x=>g(parseFloat(A0),parseFloat(B0),x));
 
   const funcTrace = {
@@ -141,6 +140,48 @@
 
   updateTable();
 
+  document.getElementById("showCurveBtn").onclick = ()=>{
+    Plotly.restyle("function2D",{visible:true},[0]);
+  };
+
+  // ---------------------------
+  // 4. SSE Surface setup
+  // ---------------------------
+  const aMin=0.5, aMax=5, aStep=0.2;
+  const bMin=0.5, bMax=5, bStep=0.2;
+  const aVals = math.range(aMin,aMax,aStep).toArray();
+  const bVals = math.range(bMin,bMax,bStep).toArray();
+
+  function plotSSE() {
+    const zValues = [];
+    for(let i=0;i<aVals.length;i++){
+      const row=[];
+      for(let j=0;j<bVals.length;j++){
+        const a=aVals[i];
+        const b=bVals[j];
+        let sse=0;
+        dataset.forEach(p=>{
+          sse += Math.pow(g(a,b,p.x)-p.y,2);
+        });
+        row.push(sse);
+      }
+      zValues.push(row);
+    }
+    Plotly.react("surfacePlot",[{
+      type:"surface",
+      x:aVals,
+      y:bVals,
+      z:zValues,
+      colorscale:"Viridis"
+    }],{title:`SSE Surface for ${chosen}`});
+  }
+
+  // Initial SSE surface
+  plotSSE();
+
+  // ---------------------------
+  // 5. Button handlers for points update
+  // ---------------------------
   document.getElementById("resetBtn").onclick = ()=>{
     generatePoints();
     pointsTrace.x = dataset.map(p=>p.x);
@@ -148,6 +189,7 @@
     layout2D.yaxis.range = [Math.min(...dataset.map(p=>p.y))-1, Math.max(...dataset.map(p=>p.y))+1];
     Plotly.react("function2D",[funcTrace, pointsTrace],layout2D);
     updateTable();
+    plotSSE();
   };
 
   document.getElementById("randomBtn").onclick = ()=>{
@@ -157,43 +199,8 @@
     layout2D.yaxis.range = [Math.min(...dataset.map(p=>p.y))-1, Math.max(...dataset.map(p=>p.y))+1];
     Plotly.react("function2D",[funcTrace, pointsTrace],layout2D);
     updateTable();
+    plotSSE();
   };
-
-  document.getElementById("showCurveBtn").onclick = ()=>{
-    Plotly.restyle("function2D",{visible:true},[0]);
-  };
-
-  // ---------------------------
-  // 4. 3D SSE Surface
-  // ---------------------------
-  const aMin=0.5, aMax=5, aStep=0.2;
-  const bMin=0.5, bMax=5, bStep=0.2;
-  const aVals = math.range(aMin,aMax,aStep).toArray();
-  const bVals = math.range(bMin,bMax,bStep).toArray();
-
-  const zValues = [];
-  for(let i=0;i<aVals.length;i++){
-    const row=[];
-    for(let j=0;j<bVals.length;j++){
-      const a=aVals[i];
-      const b=bVals[j];
-      let sse=0;
-      dataset.forEach(p=>{
-        sse += Math.pow(g(a,b,p.x)-p.y,2);
-      });
-      row.push(sse);
-    }
-    zValues.push(row);
-  }
-
-  Plotly.newPlot("surfacePlot",[{
-    type:"surface",
-    x:aVals,
-    y:bVals,
-    z:zValues,
-    colorscale:"Viridis"
-  }],{title:`SSE Surface for ${chosen}`});
-
 </script>
 </body>
 </html>
