@@ -266,8 +266,8 @@ function formatEquation(a, b) {
         return `y = ${a.toFixed(3)} \\cdot (${b.toFixed(3)})^x`;
     } else if (chosen === "A*x^B") {
         return `y = ${a.toFixed(3)} \\cdot x^{${b.toFixed(3)}}`;
-    } else { // A*log(x)+B
-        return `y = ${a.toFixed(3)} \\cdot \\log(x) + ${b.toFixed(3)}`;
+    } else { // A*ln(x)+B
+        return `y = ${a.toFixed(3)} \\cdot \\ln(x) + ${b.toFixed(3)}`;
     }
 }
 
