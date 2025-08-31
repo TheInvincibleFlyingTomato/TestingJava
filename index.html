@@ -153,42 +153,54 @@ th { background: #f0f0f0; position: sticky; top: 0; }
   }
 
   // --- 5. Gradient vector field (separate 2D graph) ---
-function plotGradientField(){
-  let gradX=[];
-  let maxGrad=0;
+function plotGradientField() {
+  let gradX = [];
+  let maxGrad = 0;
 
-  // Compute gradients and track max magnitude
-  for(let i=0;i<aVals.length;i++){
-    for(let j=0;j<bVals.length;j++){
-      const a=aVals[i], b=bVals[j];
-      let dSda=0, dSdb=0;
-      dataset.forEach(p=>{
-        const fx = g(a,b,p.x);
-        dSda += 2*(fx-p.y)*dfda(a,b,p.x);
-        dSdb += 2*(fx-p.y)*dfdb(a,b,p.x);
+  // --- 1. Compute gradients and track max magnitude ---
+  for (let i = 0; i < aVals.length; i++) {
+    for (let j = 0; j < bVals.length; j++) {
+      const a = aVals[i], b = bVals[j];
+      let dSda = 0, dSdb = 0;
+      dataset.forEach(p => {
+        const fx = g(a, b, p.x);
+        dSda += 2 * (fx - p.y) * dfda(a, b, p.x);
+        dSdb += 2 * (fx - p.y) * dfdb(a, b, p.x);
       });
-      const mag = Math.sqrt(dSda*dSda + dSdb*dSdb);
+      const mag = Math.sqrt(dSda * dSda + dSdb * dSdb);
       maxGrad = Math.max(maxGrad, mag);
-      gradX.push({a,b,u:dSda,v:dSdb,mag:mag});
+      gradX.push({ a, b, u: dSda, v: dSdb, mag });
     }
   }
 
-  const arrows = {type:"scatter", mode:"lines", x:[], y:[], line:{width:2,color:""}};
-  const scale = 0.1;    // visual length of vectors
+  // --- 2. Determine dynamic scale and softMaxFactor based on maxGrad ---
+  let scale = 0.1;           // default arrow length
+  let softMaxFactor = 0.7;   // default color threshold
+  if (maxGrad > 50) {
+    scale = 0.05;
+    softMaxFactor = 0.6;
+  } else if (maxGrad < 5) {
+    scale = 0.2;
+    softMaxFactor = 0.8;
+  }
+
+  const arrows = { type: "scatter", mode: "lines", x: [], y: [], line: { width: 2, color: "" } };
   const headSize = 0.05; // arrowhead size
 
-  gradX.forEach(v=>{
-    const norm = Math.sqrt(v.u*v.u + v.v*v.v);
-    let u = -scale * v.u / norm;  // invert
+  // --- 3. Loop through each gradient vector ---
+  gradX.forEach(v => {
+    const norm = Math.sqrt(v.u * v.u + v.v * v.v);
+    if (norm === 0) return; // skip zero vectors
+
+    // Invert and scale
+    let u = -scale * v.u / norm;
     let w = -scale * v.v / norm;
 
-    // --- Logarithmic + soft-threshold color ---
+    // Logarithmic + soft threshold color
     const logMag = Math.log(v.mag + 1);
     const logMax = Math.log(maxGrad + 1);
-    const softMax = 0.7 * logMax;        // treat top 30% as max
-    let t = Math.min(logMag / softMax, 1);
-    t = Math.pow(t, 0.7);               // smooth non-linear adjustment
-
+    let t = Math.min(logMag / (softMaxFactor * logMax), 1);
+    t = Math.pow(t, 0.7); // smooth transition
     const r = Math.floor(255 * t);
     const g = 0;
     const b = Math.floor(255 * (1 - t));
@@ -201,9 +213,8 @@ function plotGradientField(){
 
     // Arrowheads ±45°
     const angle = Math.atan2(w, u);
-    const leftAngle = angle + Math.PI/4;
-    const rightAngle = angle - Math.PI/4;
-
+    const leftAngle = angle + Math.PI / 4;
+    const rightAngle = angle - Math.PI / 4;
     const leftX = v.a + u - headSize * Math.cos(leftAngle);
     const leftY = v.b + w - headSize * Math.sin(leftAngle);
     const rightX = v.a + u - headSize * Math.cos(rightAngle);
@@ -218,13 +229,15 @@ function plotGradientField(){
     arrows.line.color = color;
   });
 
+  // --- 4. Plot the vector field ---
   Plotly.newPlot("gradVectorField", [arrows], {
     title: "Gradient Vector Field of SSE",
-    xaxis: {title: "a"},
-    yaxis: {title: "b"},
+    xaxis: { title: "a" },
+    yaxis: { title: "b" },
     showlegend: false
   });
 }
+
 
   // --- 6. Initial plot ---
   plotSSE();
