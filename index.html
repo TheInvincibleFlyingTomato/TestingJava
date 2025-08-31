@@ -40,7 +40,7 @@ th { background: #f0f0f0; position: sticky; top: 0; }
     <div id="function2D"></div>
     <div id="controls">
       <button id="resetBtn">Reset Points</button>
-      <button id="randomBtn">Generate 6 Random Points</button>
+      <button id="randomBtn">Generate 10 Random Points</button>
       <button id="showCurveBtn">Show Curve</button>
     </div>
   </div>
@@ -83,7 +83,7 @@ th { background: #f0f0f0; position: sticky; top: 0; }
   const xStart = chosen.includes("log(x)")?1:0;
   const xEnd = 10;
   let dataset=[];
-  const nPoints=6;
+  const nPoints=10;
   const scale=0.05;
   const minError=0.1;
 
