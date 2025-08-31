@@ -16,75 +16,26 @@
       padding: 20px;
       box-sizing: border-box;
     }
-    .plot {
-      width: 100%;
-      height: 100%;
-    }
-    #functionWrapper {
-      display: flex;
-      flex-direction: row;
-      align-items: stretch;
-      width: 100%;
-      height: 100%;
-    }
-    #leftSide {
-      flex: 3;
-      display: flex;
-      flex-direction: column;
-    }
-    #function2D {
-      flex: 1;
-      width: 100%;
-    }
-    #controls {
-      margin-top: 10px;
-    }
-    #rightSide {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      margin-left: 15px;
-    }
-    button {
-      margin: 5px 0;
-      padding: 6px 12px;
-      border-radius: 8px;
-      border: none;
-      background: #0077cc;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #005fa3;
-    }
-    #tableWrapper {
-      flex: 1;
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      margin-top: 10px;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 6px 10px;
-      text-align: center;
-    }
-    th {
-      background: #f0f0f0;
-      position: sticky;
-      top: 0;
-    }
+    .plot { width: 100%; height: 100%; }
+    #functionWrapper { display: flex; flex-direction: row; align-items: stretch; width: 100%; height: 100%; }
+    #leftSide { flex: 3; display: flex; flex-direction: column; }
+    #function2D { flex: 1; width: 100%; }
+    #controls { margin-top: 10px; }
+    #rightSide { flex: 1; display: flex; flex-direction: column; margin-left: 15px; }
+    button { margin: 5px 0; padding: 6px 12px; border-radius: 8px; border: none; background: #0077cc; color: white; cursor: pointer; }
+    button:hover { background: #005fa3; }
+    #tableWrapper { flex: 1; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 10px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: center; }
+    th { background: #f0f0f0; position: sticky; top: 0; }
   </style>
 </head>
 <body>
+
   <div id="surfacePlot" class="plot"></div>
   <div id="vectorField" class="plot"></div>
 
-  <!-- Function graph + table side by side -->
+  <!-- Function graph + table -->
   <div id="functionWrapper">
     <div id="leftSide">
       <div id="function2D"></div>
@@ -105,152 +56,128 @@
     </div>
   </div>
 
-  <script>
-    //---------------------------------
-    // FUNCTIONS (customize these)
-    //---------------------------------
-    const f = math.parse("sin(sqrt(x^2 + y^2))").compile();
-    const uExpr = math.parse("-y").compile();
-    const vExpr = math.parse("x").compile();
-
-    //---------------------------------
-    // 1. 3D Surface
-    //---------------------------------
-    let xValues = math.range(-5, 5.5, 0.5).toArray();
-    let yValues = math.range(-5, 5.5, 0.5).toArray();
-    let zValues = [];
-    for (let i = 0; i < xValues.length; i++) {
-      let row = [];
-      for (let j = 0; j < yValues.length; j++) {
-        row.push(f.evaluate({x: xValues[i], y: yValues[j]}));
-      }
-      zValues.push(row);
+<script>
+  //---------------------------------
+  // 1. 3D Surface
+  //---------------------------------
+  const f = math.parse("sin(sqrt(x^2 + y^2))").compile();
+  let xValues = math.range(-5, 5.5, 0.5).toArray();
+  let yValues = math.range(-5, 5.5, 0.5).toArray();
+  let zValues = [];
+  for (let i = 0; i < xValues.length; i++) {
+    let row = [];
+    for (let j = 0; j < yValues.length; j++) {
+      row.push(f.evaluate({x: xValues[i], y: yValues[j]}));
     }
-    Plotly.newPlot("surfacePlot", [{
-      type: "surface",
-      x: xValues,
-      y: yValues,
-      z: zValues,
-      colorscale: "Viridis"
-    }], {title: "3D Surface f(x,y)"});
-
-    //---------------------------------
-    // 2. Vector Field
-    //---------------------------------
-    let X = [], Y = [], U = [], V = [];
-    for (let i = -5; i <= 5; i++) {
-      for (let j = -5; j <= 5; j++) {
-        X.push(i); Y.push(j);
-        U.push(uExpr.evaluate({x: i, y: j}));
-        V.push(vExpr.evaluate({x: i, y: j}));
-      }
-    }
-    let arrows = { type:"scatter", mode:"lines+markers", x:[], y:[], line:{width:2,color:"blue"}, marker:{size:2}};
-    for (let k = 0; k < X.length; k++) {
-      arrows.x.push(X[k], X[k] + U[k], null);
-      arrows.y.push(Y[k], Y[k] + V[k], null);
-    }
-    Plotly.newPlot("vectorField", [arrows], {title:"Vector Field (u,v)", xaxis:{scaleanchor:"y"}, yaxis:{scaleanchor:"x"}});
-
-//---------------------------------
-// 3. Function + Sample Points
-//---------------------------------
-
-const forms = [
-  "A*B^x",     // a b^x
-  "A*x^B",     // a x^b
-  "A*log(x)+B" // a ln(x) + b
-];
-const chosen = forms[Math.floor(Math.random() * forms.length)];
-const A = (Math.random() * 3 + 1).toFixed(2);
-const B = (Math.random() * 3 + 1).toFixed(2);
-
-const exprStr = chosen.replace(/A/g, A).replace(/B/g, B);
-const g = math.parse(exprStr).compile();
-
-// Pick x-range based on function
-let xStart = 1, xEnd = 10;   // default
-if (chosen.includes("log(x)")) {
-  xStart = 1;                // log(x) undefined at 0
-  xEnd = 10;
-} else {
-  xStart = 0;
-  xEnd = 10;
-}
-
-// Sample curve
-const xLine = math.range(xStart, xEnd, 0.1).toArray();
-const yLine = xLine.map(x => g.evaluate({x}));
-
-// Compute ranges with padding
-const yMin = Math.min(...yLine);
-const yMax = Math.max(...yLine);
-
-const funcTrace = {
-  type: "scatter",
-  mode: "lines",
-  x: xLine,
-  y: yLine,
-  line: { color: "red" },
-  name: `g(x) = ${exprStr}`
-};
-
-const pointsTrace = {
-  type: "scatter",
-  mode: "markers",
-  x: [],
-  y: [],
-  marker: { color: "black", size: 8 },
-  name: "Sample Points"
-};
-
-const layout2D = {
-  title: `2D Function g(x) = ${exprStr}`,
-  dragmode: false,
-  xaxis: { range: [xStart, xEnd] },
-  yaxis: { range: [yMin - (yMax-yMin)*0.1, yMax + (yMax-yMin)*0.1] } // ±10% padding
-};
-
-Plotly.newPlot("function2D", [funcTrace, pointsTrace], layout2D);
-
-let dataset = [];
-
-function updateTable() {
-  const tbody = document.querySelector("#pointsTable tbody");
-  tbody.innerHTML = "";
-  dataset.forEach((pt, i) => {
-    let row = document.createElement("tr");
-    row.innerHTML = `<td>${i + 1}</td><td>${pt.x.toFixed(3)}</td><td>${pt.y.toFixed(3)}</td>`;
-    tbody.appendChild(row);
-  });
-}
-
-// Reset
-document.getElementById("resetBtn").onclick = () => {
-  dataset = [];
-  pointsTrace.x = [];
-  pointsTrace.y = [];
-  Plotly.redraw("function2D");
-  updateTable();
-};
-
-// Random 6 points near curve
-document.getElementById("randomBtn").onclick = () => {
-  dataset = [];
-  pointsTrace.x = [];
-  pointsTrace.y = [];
-  for (let i = 0; i < 6; i++) {
-    const x = Math.random() * (xEnd - xStart) + xStart;
-    const trueY = g.evaluate({x});
-    const err = (Math.random() - 0.5) * 0.5;
-    const y = trueY + err;
-    dataset.push({ x, y });
-    pointsTrace.x.push(x);
-    pointsTrace.y.push(y);
+    zValues.push(row);
   }
-  Plotly.redraw("function2D");
-  updateTable();
-};
+  Plotly.newPlot("surfacePlot", [{
+    type: "surface", x: xValues, y: yValues, z: zValues, colorscale: "Viridis"
+  }], {title: "3D Surface f(x,y)"});
+
+  //---------------------------------
+  // 2. Vector Field
+  //---------------------------------
+  const uExpr = math.parse("-y").compile();
+  const vExpr = math.parse("x").compile();
+  let X=[],Y=[],U=[],V=[];
+  for(let i=-5;i<=5;i++){
+    for(let j=-5;j<=5;j++){
+      X.push(i); Y.push(j);
+      U.push(uExpr.evaluate({x:i,y:j}));
+      V.push(vExpr.evaluate({x:i,y:j}));
+    }
+  }
+  let arrows = {type:"scatter",mode:"lines+markers",x:[],y:[],line:{width:2,color:"blue"},marker:{size:2}};
+  for(let k=0;k<X.length;k++){
+    arrows.x.push(X[k], X[k]+U[k], null);
+    arrows.y.push(Y[k], Y[k]+V[k], null);
+  }
+  Plotly.newPlot("vectorField",[arrows],{title:"Vector Field (u,v)", xaxis:{scaleanchor:"y"},yaxis:{scaleanchor:"x"}});
+
+  //---------------------------------
+  // 3. 2D Function + Points
+  //---------------------------------
+  const forms = [
+    "A*B^x",
+    "A*x^B",
+    "A*log(x)+B"
+  ];
+  const chosen = forms[Math.floor(Math.random() * forms.length)];
+  const A = (Math.random()*3+1).toFixed(2);
+  const B = (Math.random()*3+1).toFixed(2);
+  const exprStr = chosen.replace(/A/g,A).replace(/B/g,B);
+  const g = math.parse(exprStr).compile();
+
+  // Determine x-range
+  let xStart = chosen.includes("log(x)") ? 1 : 0;
+  let xEnd = 10;
+
+  const xLine = math.range(xStart, xEnd, 0.1).toArray();
+  const yLine = xLine.map(x => g.evaluate({x}));
+
+  const funcTrace = { type:"scatter", mode:"lines", x:xLine, y:yLine, line:{color:"red"}, name:`g(x) = ${exprStr}` };
+  const pointsTrace = { type:"scatter", mode:"markers", x:[], y:[], marker:{color:"black", size:8}, name:"Sample Points" };
+
+  let yMin = Math.min(...yLine);
+  let yMax = Math.max(...yLine);
+  let layout2D = {
+    title:`2D Function g(x) = ${exprStr}`,
+    dragmode:false,
+    xaxis:{range:[xStart,xEnd]},
+    yaxis:{range:[yMin-(yMax-yMin)*0.1, yMax+(yMax-yMin)*0.1]}
+  };
+
+  Plotly.newPlot("function2D",[funcTrace, pointsTrace], layout2D);
+
+  let dataset = [];
+  function updateTable(){
+    const tbody = document.querySelector("#pointsTable tbody");
+    tbody.innerHTML = "";
+    dataset.forEach((pt,i)=>{
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${i+1}</td><td>${pt.x.toFixed(3)}</td><td>${pt.y.toFixed(3)}</td>`;
+      tbody.appendChild(row);
+    });
+  }
+
+  // Reset
+  document.getElementById("resetBtn").onclick = ()=>{
+    dataset = [];
+    pointsTrace.x = [];
+    pointsTrace.y = [];
+    Plotly.react("function2D",[funcTrace, pointsTrace],layout2D);
+    updateTable();
+  };
+
+  // Random points with proportional + minimum error
+  document.getElementById("randomBtn").onclick = ()=>{
+    dataset = [];
+    pointsTrace.x = [];
+    pointsTrace.y = [];
+    const scale = 0.05;  // 5% proportional error
+    const minError = 0.1; // minimum absolute error
+
+    for(let i=0;i<6;i++){
+      const x = Math.random()*(xEnd-xStart)+xStart;
+      const trueY = g.evaluate({x});
+      const errMagnitude = Math.max(scale*Math.abs(trueY), minError);
+      const err = (Math.random()-0.5)*2*errMagnitude;
+      const y = trueY + err;
+      dataset.push({x,y});
+      pointsTrace.x.push(x);
+      pointsTrace.y.push(y);
+    }
+
+    // Recompute y-axis range with points included
+    const allY = yLine.concat(pointsTrace.y);
+    const newYMin = Math.min(...allY);
+    const newYMax = Math.max(...allY);
+    layout2D.yaxis.range = [newYMin-(newYMax-newYMin)*0.1, newYMax+(newYMax-newYMin)*0.1];
+
+    Plotly.react("function2D",[funcTrace, pointsTrace],layout2D);
+    updateTable();
+  };
 
 </script>
 </body>
