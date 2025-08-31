@@ -2,20 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Gradient Descent</title>
+<title>Gradient Descent with Trail</title>
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
 <style>
-body {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 20px;
-  height: 100vh;
-  margin: 0;
-  padding: 20px;
-  box-sizing: border-box;
-}
+body { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
 .plot { width: 100%; height: 100%; }
 #functionWrapper { display: flex; flex-direction: row; align-items: stretch; width: 100%; height: 100%; }
 #leftSide { flex: 3; display: flex; flex-direction: column; }
@@ -40,7 +31,7 @@ th { background: #f0f0f0; position: sticky; top: 0; }
     <div id="function2D"></div>
     <div id="controls">
       <button id="resetBtn">Reset Points</button>
-      <button id="randomBtn">Generate 10 Random Points</button>
+      <button id="randomBtn">Generate Random Points</button>
       <button id="stepBtn">+Step</button>
     </div>
   </div>
@@ -57,228 +48,160 @@ th { background: #f0f0f0; position: sticky; top: 0; }
 </div>
 
 <script>
-  // --- 1. Choose function type ---
-  const forms = ["A*B^x","A*x^B","A*log(x)+B"];
-  const chosen = forms[Math.floor(Math.random()*forms.length)];
-  const A0 = (Math.random()*3+1).toFixed(2);
-  const B0 = (Math.random()*3+1).toFixed(2);
+const forms = ["A*B^x","A*x^B","A*log(x)+B"];
+const chosen = forms[Math.floor(Math.random()*forms.length)];
+const A0 = parseFloat((Math.random()*3+1).toFixed(2));
+const B0 = parseFloat((Math.random()*3+1).toFixed(2));
 
-  let g, dfda, dfdb;
-  if(chosen==="A*B^x"){
+let g, dfda, dfdb;
+if(chosen==="A*B^x"){
     g=(a,b,x)=>a*Math.pow(b,x);
     dfda=(a,b,x)=>Math.pow(b,x);
     dfdb=(a,b,x)=>a*x*Math.pow(b,x-1);
-  } else if(chosen==="A*x^B"){
+} else if(chosen==="A*x^B"){
     g=(a,b,x)=>a*Math.pow(x,b);
     dfda=(a,b,x)=>Math.pow(x,b);
     dfdb=(a,b,x)=>a*Math.pow(x,b)*Math.log(x);
-  } else {
+} else {
     g=(a,b,x)=>a*Math.log(x)+b;
     dfda=(a,b,x)=>Math.log(x);
     dfdb=(a,b,x)=>1;
-  }
+}
 
-  // --- 2. Generate sample points ---
-  const xStart = chosen.includes("log(x)")?1:0;
-  const xEnd = 10;
-  let dataset=[];
-  const nPoints=10;
-  const scale=0.05;
-  const minError=0.1;
-
-  function generatePoints(){
+const xStart = chosen.includes("log(x)")?1:0;
+const xEnd = 10;
+const nPoints=10;
+let dataset=[];
+function generatePoints(){
     dataset=[];
+    const scale=0.05, minError=0.1;
     for(let i=0;i<nPoints;i++){
-      const x = Math.random()*(xEnd-xStart)+xStart;
-      const trueY = g(parseFloat(A0),parseFloat(B0),x);
-      const errMag = Math.max(scale*Math.abs(trueY),minError);
-      const y = trueY + (Math.random()-0.5)*2*errMag;
-      dataset.push({x,y});
+        const x = Math.random()*(xEnd-xStart)+xStart;
+        const trueY = g(A0,B0,x);
+        const errMag = Math.max(scale*Math.abs(trueY),minError);
+        const y = trueY + (Math.random()-0.5)*2*errMag;
+        dataset.push({x,y});
     }
-  }
-  generatePoints();
+}
+generatePoints();
 
-  // --- 3. 2D plot of points ---
-  const xLine=[];
-  for(let x=xStart;x<=xEnd;x+=0.1) xLine.push(x);
+const xLine=[];
+for(let x=xStart;x<=xEnd;x+=0.1) xLine.push(x);
+const yLine = xLine.map(x=>g(A0,B0,x));
 
-  const pointsTrace={type:"scatter",mode:"markers",x:dataset.map(p=>p.x),y:dataset.map(p=>p.y),marker:{color:"black",size:8},name:"Sample Points"};
+const funcTrace={type:"scatter",mode:"lines",x:xLine,y:yLine,line:{color:"red"},visible:false};
+const pointsTrace={type:"scatter",mode:"markers",x:dataset.map(p=>p.x),y:dataset.map(p=>p.y),marker:{color:"black",size:8}};
 
-  const layout2D={title:`2D Function`,dragmode:false,
-                  xaxis:{range:[xStart,xEnd]},
-                  yaxis:{range:[Math.min(...dataset.map(p=>p.y))-1,Math.max(...dataset.map(p=>p.y))+1]}};
+const layout2D={dragmode:false,xaxis:{range:[0,10]},yaxis:{range:[Math.min(...dataset.map(p=>p.y))-1,Math.max(...dataset.map(p=>p.y))+1]}};
+Plotly.newPlot("function2D",[funcTrace,pointsTrace],layout2D);
 
-  Plotly.newPlot("function2D",[pointsTrace],layout2D);
-
-  function updateTable(){
+function updateTable(){
     const tbody=document.querySelector("#pointsTable tbody");
     tbody.innerHTML="";
     dataset.forEach((p,i)=>{
-      const row=document.createElement("tr");
-      row.innerHTML=`<td>${i+1}</td><td>${p.x.toFixed(3)}</td><td>${p.y.toFixed(3)}</td>`;
-      tbody.appendChild(row);
+        const row=document.createElement("tr");
+        row.innerHTML=`<td>${i+1}</td><td>${p.x.toFixed(3)}</td><td>${p.y.toFixed(3)}</td>`;
+        tbody.appendChild(row);
     });
-  }
-  updateTable();
+}
+updateTable();
 
-  // --- 4. SSE surface ---
-  const aMin=0.5,aMax=5,aStep=0.2;
-  const bMin=0.5,bMax=5,bStep=0.2;
-  const aVals=math.range(aMin,aMax,aStep).toArray();
-  const bVals=math.range(bMin,bMax,bStep).toArray();
+// --- SSE surface ---
+const aVals=math.range(0.5,5,0.2).toArray();
+const bVals=math.range(0.5,5,0.2).toArray();
 
-  function computeSSE(a,b){
+function computeSSE(a,b){
     let sse=0;
-    dataset.forEach(p=>{ sse += Math.pow(g(a,b,p.x)-p.y,2); });
+    dataset.forEach(p=>{
+        const fx=g(a,b,p.x);
+        sse+=Math.pow(fx-p.y,2);
+    });
     return sse;
-  }
+}
 
-  function plotSSE(gdPoint=null, trail=[]){
-    const zValues = aVals.map(a=> bVals.map(b=> computeSSE(a,b)));
-    const traces=[{
-      type:"surface", x:aVals, y:bVals, z:zValues,
-      colorscale:"Viridis", opacity:0.9, name:"SSE Surface"
-    }];
-
-    if(gdPoint){
-      // GD point
-      traces.push({
-        type:"scatter3d", mode:"markers+lines",
-        x:[...trail.map(t=>t.a), gdPoint.a],
-        y:[...trail.map(t=>t.b), gdPoint.b],
-        z:[...trail.map(t=>computeSSE(t.a,t.b)), computeSSE(gdPoint.a, gdPoint.b)],
-        marker:{color:"magenta", size:5},
-        line:{color:"magenta", width:2},
-        name:"GD Point"
-      });
-    }
-
-    Plotly.newPlot("surfacePlot", traces, {scene:{xaxis:{title:"a"},yaxis:{title:"b"},zaxis:{title:"SSE"}}});
-  }
-
-  // --- 5. Gradient vector field ---
-  function plotGradientField(gdPoint=null){
-    let gradX = [];
-    let mags = [];
+function plotSSE(){
+    const surfaceZ=[];
     for(let i=0;i<aVals.length;i++){
-      for(let j=0;j<bVals.length;j++){
-        const a=aVals[i], b=bVals[j];
-        let dSda=0, dSdb=0;
-        dataset.forEach(p=>{
-          const fx=g(a,b,p.x);
-          dSda += 2*(fx-p.y)*dfda(a,b,p.x);
-          dSdb += 2*(fx-p.y)*dfdb(a,b,p.x);
-        });
-        const mag=Math.sqrt(dSda*dSda+dSdb*dSdb);
-        gradX.push({a,b,u:dSda,v:dSdb,mag});
-        mags.push(mag);
-      }
+        const row=[];
+        for(let j=0;j<bVals.length;j++){
+            row.push(computeSSE(aVals[i],bVals[j]));
+        }
+        surfaceZ.push(row);
     }
+    Plotly.newPlot("surfacePlot",[{
+        type:"surface",x:aVals,y:bVals,z:surfaceZ,colorscale:"Viridis",opacity:0.9
+    }],{scene:{xaxis:{title:"a"},yaxis:{title:"b"},zaxis:{title:"SSE"}}});
+}
 
-    mags.sort((a,b)=>a-b);
-    const minMag=mags[0];
-    const maxMag=mags[Math.floor(0.9*mags.length)] || mags[mags.length-1];
-    let scale=0.25;
-    const arrows={type:"scatter",mode:"lines",x:[],y:[],line:{width:2,color:""}};
-
-    gradX.forEach(v=>{
-      const norm=Math.sqrt(v.u*v.u+v.v*v.v);
-      if(norm===0) return;
-      const u=-scale*v.u/norm;
-      const w=-scale*v.v/norm;
-
-      let t=(v.mag-minMag)/(maxMag-minMag+1e-6);
-      t=Math.min(Math.max(t,0),1);
-      t=Math.pow(t,0.7);
-      const r=Math.floor(255*t);
-      const g=0;
-      const b=Math.floor(255*(1-t));
-      const color=`rgb(${r},${g},${b})`;
-
-      arrows.x.push(v.a,v.a+u,null);
-      arrows.y.push(v.b,v.b+w,null);
-      arrows.line.color=color;
-    });
-
-    const traces=[arrows];
-    if(gdPoint){
-      traces.push({
-        type:"scatter", mode:"markers",
-        x:[gdPoint.a], y:[gdPoint.b],
-        marker:{color:"magenta", size:10},
-        name:"GD Point"
-      });
+// --- Gradient field ---
+function plotGradientField(){
+    let arrows={type:"scatter",mode:"lines",x:[],y:[],line:{width:2,color:"blue"}};
+    const step=0.15;
+    for(let i=0;i<aVals.length;i++){
+        for(let j=0;j<bVals.length;j++){
+            let dSda=0,dSdb=0;
+            dataset.forEach(p=>{
+                const fx=g(aVals[i],bVals[j],p.x);
+                dSda+=2*(fx-p.y)*dfda(aVals[i],bVals[j],p.x);
+                dSdb+=2*(fx-p.y)*dfdb(aVals[i],bVals[j],p.x);
+            });
+            const norm=Math.sqrt(dSda*dSda+dSdb*dSdb);
+            if(norm===0) continue;
+            const u=-step*dSda/norm;
+            const v=-step*dSdb/norm;
+            arrows.x.push(aVals[i],aVals[i]+u,null);
+            arrows.y.push(bVals[j],bVals[j]+v,null);
+        }
     }
+    Plotly.newPlot("gradVectorField",[arrows],{xaxis:{range:[0,5],scaleanchor:"y"},yaxis:{range:[0,5],scaleanchor:"x"},showlegend:false});
+}
 
-    Plotly.newPlot("gradVectorField", traces, {
-      title:"Gradient Vector Field",
-      xaxis:{range:[0,5],scaleanchor:"y"},
-      yaxis:{range:[0,5],scaleanchor:"x"},
-      showlegend:false
-    });
-  }
+// --- Gradient Descent point with trail ---
+let gdPoint={a:Math.random()*4+0.5,b:Math.random()*4+0.5};
+let trailX=[gdPoint.a], trailY=[gdPoint.b], trailZ=[computeSSE(gdPoint.a,gdPoint.b)];
 
-  // --- 6. Gradient Descent Point & Trail ---
-  let gdPoint = {a: Math.random()*5, b: Math.random()*5};
-  let trail = [];
-  const stepSize = 0.2;
+function plotGDPoint(){
+    Plotly.react("surfacePlot",[
+        {type:"surface",x:aVals,y:bVals,z:aVals.map((_,i)=>bVals.map((_,j)=>computeSSE(aVals[i],bVals[j]))),colorscale:"Viridis",opacity:0.9},
+        {type:"scatter3d",mode:"lines+markers",x:trailX,y:trailY,z:trailZ,marker:{size:4,color:"red"},line:{color:"red",width:3}}
+    ]);
+}
 
-  function gradAt(a,b){
+function plot2DCurrentCurve(){
+    const yVals = xLine.map(x=>g(gdPoint.a,gdPoint.b,x));
+    Plotly.react("function2D",[
+        {type:"scatter",mode:"markers",x:dataset.map(p=>p.x),y:dataset.map(p=>p.y),marker:{color:"black",size:8}},
+        {type:"scatter",mode:"lines",x:xLine,y:yVals,line:{color:"red"}}
+    ],layout2D);
+}
+
+// --- Step button ---
+const stepSize=0.25;
+document.getElementById("stepBtn").onclick=()=>{
     let dSda=0,dSdb=0;
     dataset.forEach(p=>{
-      const fx=g(a,b,p.x);
-      dSda += 2*(fx-p.y)*dfda(a,b,p.x);
-      dSdb += 2*(fx-p.y)*dfdb(a,b,p.x);
+        const fx=g(gdPoint.a,gdPoint.b,p.x);
+        dSda+=2*(fx-p.y)*dfda(gdPoint.a,gdPoint.b,p.x);
+        dSdb+=2*(fx-p.y)*dfdb(gdPoint.a,gdPoint.b,p.x);
     });
-    return {dSda,dSdb};
-  }
+    const norm=Math.sqrt(dSda*dSda+dSdb*dSdb);
+    if(norm>0){
+        gdPoint.a -= stepSize*dSda/norm;
+        gdPoint.b -= stepSize*dSdb/norm;
+    }
+    trailX.push(gdPoint.a);
+    trailY.push(gdPoint.b);
+    trailZ.push(computeSSE(gdPoint.a,gdPoint.b));
+    plotGDPoint();
+    plot2DCurrentCurve();
+}
 
-  function updateGD(){
-    plotSSE(gdPoint, trail);
-    plotGradientField(gdPoint);
-    // update 2D function plot
-    const currentY = xLine.map(x => g(gdPoint.a, gdPoint.b, x));
-    Plotly.react("function2D", [{
-      type:"scatter", mode:"markers",
-      x:dataset.map(p=>p.x),
-      y:dataset.map(p=>p.y),
-      marker:{color:"black",size:8}
-    },{
-      type:"scatter", mode:"lines",
-      x:xLine,
-      y:currentY,
-      line:{color:"blue"}
-    }], layout2D);
-  }
-
-  document.getElementById("stepBtn").onclick = ()=>{
-    const grad = gradAt(gdPoint.a, gdPoint.b);
-    trail.push({...gdPoint});
-    gdPoint.a -= stepSize * grad.dSda;
-    gdPoint.b -= stepSize * grad.dSdb;
-    gdPoint.a=Math.min(Math.max(gdPoint.a,0),5);
-    gdPoint.b=Math.min(Math.max(gdPoint.b,0),5);
-    updateGD();
-  };
-
-  document.getElementById("resetBtn").onclick=()=>{
-    generatePoints();
-    updateTable();
-    trail=[];
-    gdPoint = {a: Math.random()*5, b: Math.random()*5};
-    updateGD();
-  };
-
-  document.getElementById("randomBtn").onclick=()=>{
-    generatePoints();
-    updateTable();
-    trail=[];
-    gdPoint = {a: Math.random()*5, b: Math.random()*5};
-    updateGD();
-  };
-
-  // --- initial plots ---
-  updateGD();
+// --- Initial plots ---
+plotSSE();
+plotGradientField();
+plotGDPoint();
+plot2DCurrentCurve();
 </script>
+
 </body>
 </html>
