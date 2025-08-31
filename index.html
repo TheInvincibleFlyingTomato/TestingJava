@@ -153,7 +153,7 @@ th { background: #f0f0f0; position: sticky; top: 0; }
   }
 
   // --- 5. Gradient vector field (separate 2D graph) ---
- function plotGradientField(){
+function plotGradientField(){
   let gradX=[];
   let maxGrad=0;
   for(let i=0;i<aVals.length;i++){
@@ -172,44 +172,46 @@ th { background: #f0f0f0; position: sticky; top: 0; }
   }
 
   const arrows={type:"scatter",mode:"lines",x:[],y:[],line:{width:2,color:""}};
-  const scale=0.1;
+  const scale=0.1;    // visual vector length
   const headSize=0.05; // size of arrowhead
+
   gradX.forEach(v=>{
     const norm=Math.sqrt(v.u*v.u + v.v*v.v);
-    const u=-1*scale*v.u/norm;
-    const w=-1*scale*v.v/norm;
+    let u=-scale*v.u/norm; // invert
+    let w=-scale*v.v/norm;
 
-    // Compute normalized magnitude t using log scaling
-    const epsilon = 1e-6; // avoid log(0)
-    let t = Math.log(v.mag + 1) / Math.log(maxGrad + 1); // natural log
-    t = Math.min(Math.max(t, 0), 1); // clamp to [0,1]
-    
-    // Now assign color
-    const r = Math.floor(255 * t);
+    // Logarithmic color scaling
+    const logScale = Math.log(v.mag + 1) / Math.log(maxGrad + 1);
+    let t = Math.min(Math.max(logScale, 0), 1);
+    // optional: compress small differences further
+    t = Math.pow(t, 0.7);  
+
+    const r = Math.floor(255*t);
     const g = 0;
-    const b = Math.floor(255 * (1 - t));
+    const b = Math.floor(255*(1-t));
     const color = `rgb(${r},${g},${b})`;
 
-    // Main arrow line
-    arrows.x.push(v.a,v.a+u,null);
-    arrows.y.push(v.b,v.b+w,null);
+    // Main vector line
+    arrows.x.push(v.a, v.a+u, null);
+    arrows.y.push(v.b, v.b+w, null);
     arrows.line.color=color;
 
-    // Arrowhead lines (two small lines at an angle)
-    const angle=Math.atan2(w,u);
-    const leftAngle=angle + Math.PI*0.25; // 45 deg from main line
-    const rightAngle=angle - Math.PI*0.25;
-    const leftX=v.a+u-headSize*Math.cos(leftAngle);
-    const leftY=v.b+w-headSize*Math.sin(leftAngle);
-    const rightX=v.a+u-headSize*Math.cos(rightAngle);
-    const rightY=v.b+w-headSize*Math.sin(rightAngle);
+    // Arrowheads ±45°
+    const angle = Math.atan2(w,u);
+    const leftAngle = angle + Math.PI/4;
+    const rightAngle = angle - Math.PI/4;
 
-    arrows.x.push(v.a+u,leftX,null);
-    arrows.y.push(v.b+w,leftY,null);
+    const leftX = v.a+u-headSize*Math.cos(leftAngle);
+    const leftY = v.b+w-headSize*Math.sin(leftAngle);
+    const rightX = v.a+u-headSize*Math.cos(rightAngle);
+    const rightY = v.b+w-headSize*Math.sin(rightAngle);
+
+    arrows.x.push(v.a+u, leftX, null);
+    arrows.y.push(v.b+w, leftY, null);
     arrows.line.color=color;
 
-    arrows.x.push(v.a+u,rightX,null);
-    arrows.y.push(v.b+w,rightY,null);
+    arrows.x.push(v.a+u, rightX, null);
+    arrows.y.push(v.b+w, rightY, null);
     arrows.line.color=color;
   });
 
@@ -220,7 +222,6 @@ th { background: #f0f0f0; position: sticky; top: 0; }
     showlegend:false
   });
 }
-
   // --- 6. Initial plot ---
   plotSSE();
   plotGradientField();
