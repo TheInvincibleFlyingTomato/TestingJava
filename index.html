@@ -172,18 +172,23 @@ th { background: #f0f0f0; position: sticky; top: 0; }
   }
 
   const arrows={type:"scatter",mode:"lines",x:[],y:[],line:{width:2,color:""}};
-  const scale=0.2;
+  const scale=0.1;
   const headSize=0.05; // size of arrowhead
   gradX.forEach(v=>{
     const norm=Math.sqrt(v.u*v.u + v.v*v.v);
     const u=-1*scale*v.u/norm;
     const w=-1*scale*v.v/norm;
 
-    // Color mapping
-    let t=Math.pow(v.mag/maxGrad,2);
-    const r=Math.floor(255*t);
-    const b=Math.floor(255*(1-t));
-    const color=`rgb(${r},0,${b})`;
+    // Compute normalized magnitude t using log scaling
+    const epsilon = 1e-6; // avoid log(0)
+    let t = Math.log(v.mag + 1) / Math.log(maxGrad + 1); // natural log
+    t = Math.min(Math.max(t, 0), 1); // clamp to [0,1]
+    
+    // Now assign color
+    const r = Math.floor(255 * t);
+    const g = 0;
+    const b = Math.floor(255 * (1 - t));
+    const color = `rgb(${r},${g},${b})`;
 
     // Main arrow line
     arrows.x.push(v.a,v.a+u,null);
