@@ -153,54 +153,100 @@
     }
     Plotly.newPlot("vectorField", [arrows], {title:"Vector Field (u,v)", xaxis:{scaleanchor:"y"}, yaxis:{scaleanchor:"x"}});
 
-    //---------------------------------
-    // 3. Function + Sample Points
-    //---------------------------------
-    let xLine = math.range(-10, 10, 0.1).toArray();
-    let yLine = xLine.map(x => g.evaluate({x}));
+  //---------------------------------
+  // 3. Function + Sample Points
+  //---------------------------------
+  let xLine = math.range(-10, 10, 0.1).toArray();
+  let yLine = xLine.map(x => g.evaluate({x}));
 
-    let funcTrace = { type:"scatter", mode:"lines", x:xLine, y:yLine, line:{color:"red"}, name:"g(x)" };
-    let pointsTrace = { type:"scatter", mode:"markers", x:[], y:[], marker:{color:"black", size:8}, name:"Sample Points" };
+  // Function curve
+  let funcTrace = {
+    type: "scatter",
+    mode: "lines",
+    x: xLine,
+    y: yLine,
+    line: { color: "red" },
+    name: "g(x)"
+  };
 
-    Plotly.newPlot("function2D", [funcTrace, pointsTrace], {title:"2D Function g(x)"});
+  // Sample points
+  let pointsTrace = {
+    type: "scatter",
+    mode: "markers",
+    x: [],
+    y: [],
+    marker: { color: "black", size: 8 },
+    name: "Sample Points"
+  };
 
-    let dataset = [];
+  // Invisible background layer to capture clicks
+  let clickCatcher = {
+    type: "scatter",
+    mode: "markers",
+    x: [-10, 10],
+    y: [-10, 10],
+    marker: { opacity: 0 },
+    showlegend: false,
+    hoverinfo: "skip"
+  };
 
-    // Helper to update the table
-    function updateTable() {
-      const tbody = document.querySelector("#pointsTable tbody");
-      tbody.innerHTML = "";
-      dataset.forEach((pt, i) => {
-        let row = document.createElement("tr");
-        row.innerHTML = `<td>${i+1}</td><td>${pt.x.toFixed(3)}</td><td>${pt.y.toFixed(3)}</td>`;
-        tbody.appendChild(row);
-      });
+  let layout2D = {
+    title: "2D Function g(x)",
+    dragmode: false,   
+    xaxis: { range: [-10, 10] },
+    yaxis: { range: [-10, 10] }
+  };
+
+  Plotly.newPlot("function2D", [funcTrace, pointsTrace, clickCatcher], layout2D);
+
+  let dataset = [];
+
+  // Click handler for adding points (anywhere in plot area)
+  document.getElementById("function2D").on('plotly_click', (data) => {
+    let x = data.points[0].x;
+    let y = data.points[0].y;
+    dataset.push({ x, y });
+    pointsTrace.x.push(x);
+    pointsTrace.y.push(y);
+    Plotly.redraw("function2D");
+    updateTable();
+  });
+
+  // Update table
+  function updateTable() {
+    const tbody = document.querySelector("#pointsTable tbody");
+    tbody.innerHTML = "";
+    dataset.forEach((pt, i) => {
+      let row = document.createElement("tr");
+      row.innerHTML = `<td>${i + 1}</td><td>${pt.x.toFixed(3)}</td><td>${pt.y.toFixed(3)}</td>`;
+      tbody.appendChild(row);
+    });
+  }
+
+  // Reset button
+  document.getElementById("resetBtn").onclick = () => {
+    dataset = [];
+    pointsTrace.x = [];
+    pointsTrace.y = [];
+    Plotly.redraw("function2D");
+    updateTable();
+  };
+
+  // Random points (not on curve)
+  document.getElementById("randomBtn").onclick = () => {
+    dataset = [];
+    pointsTrace.x = [];
+    pointsTrace.y = [];
+    for (let i = 0; i < 10; i++) {
+      let x = -10 + Math.random() * 20;
+      let y = -10 + Math.random() * 20;
+      dataset.push({ x, y });
+      pointsTrace.x.push(x);
+      pointsTrace.y.push(y);
     }
-
-    // Reset button
-    document.getElementById("resetBtn").onclick = () => {
-      dataset = [];
-      pointsTrace.x = [];
-      pointsTrace.y = [];
-      Plotly.redraw("function2D");
-      updateTable();
-    };
-
-    // Generate 10 random points (reset + add new points)
-    document.getElementById("randomBtn").onclick = () => {
-      dataset = [];
-      pointsTrace.x = [];
-      pointsTrace.y = [];
-      for (let i = 0; i < 10; i++) {
-        let x = -10 + Math.random()*20;
-        let y = g.evaluate({x});
-        dataset.push({x,y});
-        pointsTrace.x.push(x);
-        pointsTrace.y.push(y);
-      }
-      Plotly.redraw("function2D");
-      updateTable();
-    };
-  </script>
+    Plotly.redraw("function2D");
+    updateTable();
+  };
+</script>
 </body>
 </html>
