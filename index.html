@@ -29,8 +29,12 @@ th { background: #f0f0f0; position: sticky; top: 0; }
 
 <div id="functionWrapper">
   <div id="leftSide">
-    <div id="function2D"></div>
+    <div id="function2DWrapper" style="display:flex; flex-direction:column; height:100%;">
+      <div id="equationDisplay" style="text-align:center; font-size:18px; margin-bottom:5px;"></div>
+      <div id="function2D" style="flex:1;"></div>
+    </div>
     <div id="controls">
+      <button id="resetBtn">Reset Points</button>
       <button id="randomBtn">Generate Random Points</button>
       <button id="stepBtn">+Step</button>
       <button id="step40Btn">+40 Steps</button>
@@ -285,6 +289,12 @@ function plot2DCurrentCurve() {
     const r2 = computeR2(gdPoint.a, gdPoint.b);
     const eqn = formatEquation(gdPoint.a, gdPoint.b);
 
+    // 1️⃣ Update the MathJax equation div
+    const eqDiv = document.getElementById("equationDisplay");
+    eqDiv.innerHTML = `\\(${eqn},\\; R^2 = ${r2.toFixed(4)}\\)`;
+    MathJax.typesetPromise();
+
+    // 2️⃣ Update the 2D plot
     Plotly.react("function2D", [
         {
             type: "scatter",
@@ -300,19 +310,7 @@ function plot2DCurrentCurve() {
             y: yVals,
             line: { color: "red" }
         }
-    ], {
-        ...layout2D,
-        annotations: [{
-            xref: "paper", yref: "paper",
-            x: 0.5, y: 1.15,
-            text: `<div>\\(${eqn},\\; R^2 = ${r2.toFixed(4)}\\)</div>`,
-            showarrow: false,
-            font: { size: 18, color: "black" },
-            align: "center"
-        }]
-    }).then(() => {
-        MathJax.typesetPromise();
-    });
+    ], layout2D);
 }
 
 
