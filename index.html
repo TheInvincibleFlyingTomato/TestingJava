@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>TEST</title>
+  <title>Interactive Graphs</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
   <style>
@@ -20,35 +20,58 @@
       width: 100%;
       height: 100%;
     }
+    #functionWrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #function2D {
+      flex: 1;
+      width: 100%;
+    }
+    #controls {
+      margin-top: 10px;
+    }
+    button {
+      margin: 5px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: none;
+      background: #0077cc;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #005fa3;
+    }
   </style>
 </head>
 <body>
   <div id="surfacePlot" class="plot"></div>
   <div id="vectorField" class="plot"></div>
-  <div id="function2D" class="plot"></div>
+  <div id="functionWrapper">
+    <div id="function2D"></div>
+    <div id="controls">
+      <button id="resetBtn">Reset Points</button>
+      <button id="randomBtn">Add 10 Random Points</button>
+    </div>
+  </div>
 
   <script>
-    //-------------------------------
-    // FUNCTIONS (edit these easily)
-    //-------------------------------
+    //---------------------------------
+    // FUNCTIONS (customize these)
+    //---------------------------------
+    const f = math.parse("sin(sqrt(x^2 + y^2))").compile();
+    const uExpr = math.parse("-y").compile();
+    const vExpr = math.parse("x").compile();
+    const g = math.parse("cos(x)").compile();
 
-    // Multivariable function f(x,y)
-    const f = math.parse("(x+y*log(3,e)-5)^2").compile();
-
-    // Vector field (u,v)
-    const uExpr = math.parse("-y").compile();  // dx component
-    const vExpr = math.parse("x").compile();   // dy component
-
-    // 2D function g(x)
-    const g = math.parse("3*x^2.718").compile();
-
-    //-------------------------------
-    // 1. 3D Surface Plot
-    //-------------------------------
+    //---------------------------------
+    // 1. 3D Surface
+    //---------------------------------
     let xValues = math.range(-5, 5.5, 0.5).toArray();
     let yValues = math.range(-5, 5.5, 0.5).toArray();
     let zValues = [];
-
     for (let i = 0; i < xValues.length; i++) {
       let row = [];
       for (let j = 0; j < yValues.length; j++) {
@@ -56,7 +79,6 @@
       }
       zValues.push(row);
     }
-
     Plotly.newPlot("surfacePlot", [{
       type: "surface",
       x: xValues,
@@ -65,55 +87,69 @@
       colorscale: "Viridis"
     }], {title: "3D Surface f(x,y)"});
 
-
-    //-------------------------------
+    //---------------------------------
     // 2. Vector Field
-    //-------------------------------
+    //---------------------------------
     let X = [], Y = [], U = [], V = [];
-
     for (let i = -5; i <= 5; i++) {
       for (let j = -5; j <= 5; j++) {
-        X.push(i);
-        Y.push(j);
+        X.push(i); Y.push(j);
         U.push(uExpr.evaluate({x: i, y: j}));
         V.push(vExpr.evaluate({x: i, y: j}));
       }
     }
-
-    let arrows = {
-      type: "scatter",
-      mode: "lines+markers",
-      x: [],
-      y: [],
-      line: {width: 2, color: "blue"},
-      marker: {size: 2}
-    };
-
+    let arrows = { type:"scatter", mode:"lines+markers", x:[], y:[], line:{width:2,color:"blue"}, marker:{size:2}};
     for (let k = 0; k < X.length; k++) {
       arrows.x.push(X[k], X[k] + U[k], null);
       arrows.y.push(Y[k], Y[k] + V[k], null);
     }
+    Plotly.newPlot("vectorField", [arrows], {title:"Vector Field (u,v)", xaxis:{scaleanchor:"y"}, yaxis:{scaleanchor:"x"}});
 
-    Plotly.newPlot("vectorField", [arrows], {
-      title: "Vector Field (u,v)",
-      xaxis: {scaleanchor: "y"},
-      yaxis: {scaleanchor: "x"}
-    });
-
-
-    //-------------------------------
-    // 3. 2D Function Plot
-    //-------------------------------
+    //---------------------------------
+    // 3. Function + Interactive Points
+    //---------------------------------
     let xLine = math.range(-10, 10, 0.1).toArray();
     let yLine = xLine.map(x => g.evaluate({x}));
 
-    Plotly.newPlot("function2D", [{
-      type: "scatter",
-      mode: "lines",
-      x: xLine,
-      y: yLine,
-      line: {color: "red"}
-    }], {title: "2D Function g(x)"});
+    let funcTrace = { type:"scatter", mode:"lines", x:xLine, y:yLine, line:{color:"red"}, name:"g(x)" };
+    let pointsTrace = { type:"scatter", mode:"markers", x:[], y:[], marker:{color:"black", size:8}, name:"Points" };
+
+    Plotly.newPlot("function2D", [funcTrace, pointsTrace], {title:"2D Function g(x)"});
+
+    let dataset = [];
+
+    // Handle clicks on the function plot
+    document.getElementById("function2D").on('plotly_click', function(data) {
+      let x = data.points[0].x;
+      let y = data.points[0].y;
+      dataset.push({x,y});
+      pointsTrace.x.push(x);
+      pointsTrace.y.push(y);
+      Plotly.redraw("function2D");
+      console.log("Dataset:", dataset);
+    });
+
+    // Reset button
+    document.getElementById("resetBtn").onclick = () => {
+      dataset = [];
+      pointsTrace.x = [];
+      pointsTrace.y = [];
+      Plotly.redraw("function2D");
+      console.log("Dataset cleared.");
+    };
+
+    // Add 10 random points button
+    document.getElementById("randomBtn").onclick = () => {
+      for (let i = 0; i < 10; i++) {
+        let x = -10 + Math.random()*20;
+        let y = g.evaluate({x});
+        dataset.push({x,y});
+        pointsTrace.x.push(x);
+        pointsTrace.y.push(y);
+      }
+      Plotly.redraw("function2D");
+      console.log("Dataset:", dataset);
+    };
 
   </script>
 </body>
