@@ -33,6 +33,7 @@ th { background: #f0f0f0; position: sticky; top: 0; }
       <button id="resetBtn">Reset Points</button>
       <button id="randomBtn">Generate Random Points</button>
       <button id="stepBtn">+Step</button>
+      <button id="step40Btn">+40 Stepsstep</button>
     </div>
   </div>
   <div id="rightSide">
@@ -336,6 +337,7 @@ document.getElementById("stepBtn").onclick = () => {
         gdPoint.a += stepSize * unitU;
         gdPoint.b += stepSize * unitV;
     }
+    
 
     stepCount++;
 
@@ -346,6 +348,49 @@ document.getElementById("stepBtn").onclick = () => {
     plotGDPoint();
     plot2DCurrentCurve();
 };
+document.getElementById("step40Btn").onclick = () => {
+    let stepsTaken = 0;
+    const maxSteps = 40;
+
+    const interval = setInterval(() => {
+        // Compute gradient at current point
+        let dSda = 0, dSdb = 0;
+        dataset.forEach(p => {
+            const fx = g(gdPoint.a, gdPoint.b, p.x);
+            dSda += 2 * (fx - p.y) * dfda(gdPoint.a, gdPoint.b, p.x);
+            dSdb += 2 * (fx - p.y) * dfdb(gdPoint.a, gdPoint.b, p.x);
+        });
+
+        // Normalize gradient
+        const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
+        if (norm > 0) {
+            const unitU = -dSda / norm;
+            const unitV = -dSdb / norm;
+
+            // Step size decays as (0.25 * (0.9^n))
+            const stepSize = 0.25 * Math.pow(0.9, stepCount);
+
+            gdPoint.a += stepSize * unitU;
+            gdPoint.b += stepSize * unitV;
+        }
+
+        stepCount++;
+        trailX.push(gdPoint.a);
+        trailY.push(gdPoint.b);
+        trailZ.push(computeSSE(gdPoint.a, gdPoint.b));
+
+        // Update plots live
+        plotGDPoint();
+        plot2DCurrentCurve();
+        plotGradientField();
+
+        stepsTaken++;
+        if (stepsTaken >= maxSteps) {
+            clearInterval(interval); // stop after 40
+        }
+    }, 300); // delay in ms per step (0.3s)
+};
+
 
 // --- Initial plots ---
 plotSSE();
