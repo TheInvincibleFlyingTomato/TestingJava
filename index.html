@@ -301,10 +301,11 @@ function plot2DCurrentCurve() {
         ...layout2D,
         annotations: [{
             xref: "paper", yref: "paper",
-            x: 0.5, y: 1.15,  // centered above plot
-            text: `$${eqn}, \\; R^2 = ${r2.toFixed(4)}$`,
+            x: 0.5, y: 1.15,           // centered above plot
+            // Use MathJax \(...\) delimiters to avoid $-mismatches:
+            text: `\\(${eqn},\\; R^2 = ${r2.toFixed(4)}\\)`,
             showarrow: false,
-            font: { size: 18, color: "black" }, // black text
+            font: { size: 18, color: "black" },
             align: "center"
         }]
     });
