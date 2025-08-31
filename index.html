@@ -112,7 +112,6 @@
     const f = math.parse("sin(sqrt(x^2 + y^2))").compile();
     const uExpr = math.parse("-y").compile();
     const vExpr = math.parse("x").compile();
-    const g = math.parse("cos(x)").compile();
 
     //---------------------------------
     // 1. 3D Surface
@@ -153,30 +152,20 @@
     }
     Plotly.newPlot("vectorField", [arrows], {title:"Vector Field (u,v)", xaxis:{scaleanchor:"y"}, yaxis:{scaleanchor:"x"}});
 
-  //---------------------------------
+   //---------------------------------
   // 3. Function + Sample Points
   //---------------------------------
 
-  // Function forms, with explicit placeholders
   const forms = [
     "A*B^x",     // a b^x
     "A*x^B",     // a x^b
     "A*log(x)+B" // a ln(x) + b
   ];
-
-  // Pick one form
   const chosen = forms[Math.floor(Math.random() * forms.length)];
+  const A = (Math.random() * 3 + 1).toFixed(2);
+  const B = (Math.random() * 3 + 1).toFixed(2);
 
-  // Random coefficients
-  const A = (Math.random() * 3 + 1).toFixed(2); // 1–4
-  const B = (Math.random() * 3 + 1).toFixed(2); // 1–4
-
-  // Plug in values
-  const exprStr = chosen
-    .replace(/A/g, A)
-    .replace(/B/g, B);
-
-  // Compile chosen function
+  const exprStr = chosen.replace(/A/g, A).replace(/B/g, B);
   const g = math.parse(exprStr).compile();
 
   // Sample curve
@@ -201,11 +190,14 @@
     name: "Sample Points"
   };
 
+  const yMin = Math.min(...yLine);
+  const yMax = Math.max(...yLine);
+
   const layout2D = {
     title: `2D Function g(x) = ${exprStr}`,
     dragmode: false,
     xaxis: { range: [0, 10] },
-    yaxis: { range: [0, 20] }
+    yaxis: { range: [yMin - 1, yMax + 1] }
   };
 
   Plotly.newPlot("function2D", [funcTrace, pointsTrace], layout2D);
@@ -222,7 +214,7 @@
     });
   }
 
-  // Reset button
+  // Reset
   document.getElementById("resetBtn").onclick = () => {
     dataset = [];
     pointsTrace.x = [];
@@ -231,25 +223,24 @@
     updateTable();
   };
 
-  // Random button generates 6 points near curve
+  // Random 6 points near curve
   document.getElementById("randomBtn").onclick = () => {
     dataset = [];
     pointsTrace.x = [];
     pointsTrace.y = [];
-
     for (let i = 0; i < 6; i++) {
-      const x = Math.random() * 9 + 1; // [1, 10]
+      const x = Math.random() * 9 + 1;
       const trueY = g.evaluate({x});
-      const err = (Math.random() - 0.5) * 0.5; // -0.25 to +0.25
+      const err = (Math.random() - 0.5) * 0.5; // noise in [-0.25, 0.25]
       const y = trueY + err;
       dataset.push({ x, y });
       pointsTrace.x.push(x);
       pointsTrace.y.push(y);
     }
-
     Plotly.redraw("function2D");
     updateTable();
   };
+
 </script>
 </body>
 </html>
