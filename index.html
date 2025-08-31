@@ -6,33 +6,34 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
 <style>
-  body {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 20px;
-    height: 100vh;
-    margin: 0;
-    padding: 20px;
-    box-sizing: border-box;
-  }
-  .plot { width: 100%; height: 100%; }
-  #functionWrapper { display: flex; flex-direction: row; align-items: stretch; width: 100%; height: 100%; }
-  #leftSide { flex: 3; display: flex; flex-direction: column; }
-  #function2D { flex: 1; width: 100%; }
-  #controls { margin-top: 10px; }
-  #rightSide { flex: 1; display: flex; flex-direction: column; margin-left: 15px; }
-  button { margin: 5px 0; padding: 6px 12px; border-radius: 8px; border: none; background: #0077cc; color: white; cursor: pointer; }
-  button:hover { background: #005fa3; }
-  #tableWrapper { flex: 1; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 10px; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: center; }
-  th { background: #f0f0f0; position: sticky; top: 0; }
+body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 20px;
+  height: 100vh;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+.plot { width: 100%; height: 100%; }
+#functionWrapper { display: flex; flex-direction: row; align-items: stretch; width: 100%; height: 100%; }
+#leftSide { flex: 3; display: flex; flex-direction: column; }
+#function2D { flex: 1; width: 100%; }
+#controls { margin-top: 10px; }
+#rightSide { flex: 1; display: flex; flex-direction: column; margin-left: 15px; }
+button { margin: 5px 0; padding: 6px 12px; border-radius: 8px; border: none; background: #0077cc; color: white; cursor: pointer; }
+button:hover { background: #005fa3; }
+#tableWrapper { flex: 1; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 10px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: center; }
+th { background: #f0f0f0; position: sticky; top: 0; }
 </style>
 </head>
 <body>
 
 <div id="surfacePlot" class="plot"></div>
+<div id="gradVectorField" class="plot"></div>
 
 <div id="functionWrapper">
   <div id="leftSide">
@@ -56,34 +57,29 @@
 </div>
 
 <script>
-  // ---------------------------
-  // 1. Choose function type
-  // ---------------------------
-  const forms = ["A*B^x", "A*x^B", "A*log(x)+B"];
-  const chosen = forms[Math.floor(Math.random() * forms.length)];
+  // --- 1. Choose function type ---
+  const forms = ["A*B^x","A*x^B","A*log(x)+B"];
+  const chosen = forms[Math.floor(Math.random()*forms.length)];
   const A0 = (Math.random()*3+1).toFixed(2);
   const B0 = (Math.random()*3+1).toFixed(2);
   const exprStr = chosen.replace(/A/g,A0).replace(/B/g,B0);
 
-  let g;
-  let dfda, dfdb;
+  let g, dfda, dfdb;
   if(chosen==="A*B^x"){
-    g = (a,b,x)=>a*Math.pow(b,x);
-    dfda = (a,b,x)=>Math.pow(b,x);
-    dfdb = (a,b,x)=>a*x*Math.pow(b,x-1);
+    g=(a,b,x)=>a*Math.pow(b,x);
+    dfda=(a,b,x)=>Math.pow(b,x);
+    dfdb=(a,b,x)=>a*x*Math.pow(b,x-1);
   } else if(chosen==="A*x^B"){
-    g = (a,b,x)=>a*Math.pow(x,b);
-    dfda = (a,b,x)=>Math.pow(x,b);
-    dfdb = (a,b,x)=>a*Math.pow(x,b)*Math.log(x);
+    g=(a,b,x)=>a*Math.pow(x,b);
+    dfda=(a,b,x)=>Math.pow(x,b);
+    dfdb=(a,b,x)=>a*Math.pow(x,b)*Math.log(x);
   } else {
-    g = (a,b,x)=>a*Math.log(x)+b;
-    dfda = (a,b,x)=>Math.log(x);
-    dfdb = (a,b,x)=>1;
+    g=(a,b,x)=>a*Math.log(x)+b;
+    dfda=(a,b,x)=>Math.log(x);
+    dfdb=(a,b,x)=>1;
   }
 
-  // ---------------------------
-  // 2. Generate sample points
-  // ---------------------------
+  // --- 2. Generate sample points ---
   const xStart = chosen.includes("log(x)")?1:0;
   const xEnd = 10;
   let dataset=[];
@@ -103,19 +99,17 @@
   }
   generatePoints();
 
-  // ---------------------------
-  // 3. 2D Plot
-  // ---------------------------
-  const xLine = [];
+  // --- 3. 2D plot of points ---
+  const xLine=[];
   for(let x=xStart;x<=xEnd;x+=0.1) xLine.push(x);
   const yLine = xLine.map(x=>g(parseFloat(A0),parseFloat(B0),x));
 
-  const funcTrace = {type:"scatter",mode:"lines",x:xLine,y:yLine,line:{color:"red"},name:`g(x)=${exprStr}`,visible:false};
-  const pointsTrace = {type:"scatter",mode:"markers",x:dataset.map(p=>p.x),y:dataset.map(p=>p.y),marker:{color:"black",size:8},name:"Sample Points"};
+  const funcTrace={type:"scatter",mode:"lines",x:xLine,y:yLine,line:{color:"red"},name:`g(x)=${exprStr}`,visible:false};
+  const pointsTrace={type:"scatter",mode:"markers",x:dataset.map(p=>p.x),y:dataset.map(p=>p.y),marker:{color:"black",size:8},name:"Sample Points"};
 
-  const layout2D = {title:`2D Function g(x) = ${exprStr}`,dragmode:false,
-                    xaxis:{range:[xStart,xEnd]},
-                    yaxis:{range:[Math.min(...dataset.map(p=>p.y))-1,Math.max(...dataset.map(p=>p.y))+1]}};
+  const layout2D={title:`2D Function g(x) = ${exprStr}`,dragmode:false,
+                  xaxis:{range:[xStart,xEnd]},
+                  yaxis:{range:[Math.min(...dataset.map(p=>p.y))-1,Math.max(...dataset.map(p=>p.y))+1]}};
 
   Plotly.newPlot("function2D",[funcTrace,pointsTrace],layout2D);
 
@@ -132,65 +126,78 @@
 
   document.getElementById("showCurveBtn").onclick=()=>{Plotly.restyle("function2D",{visible:true},[0]);};
 
-  // ---------------------------
-  // 4. SSE Surface & Gradient Field
-  // ---------------------------
+  // --- 4. SSE surface ---
   const aMin=0.5,aMax=5,aStep=0.2;
   const bMin=0.5,bMax=5,bStep=0.2;
   const aVals=math.range(aMin,aMax,aStep).toArray();
   const bVals=math.range(bMin,bMax,bStep).toArray();
 
-  function plotSSEandGrad(){
-    let zValues=[],gradX=[],gradY=[],gradColor=[];
-    let maxGrad=0;
-
+  function plotSSE(){
+    let zValues=[];
     for(let i=0;i<aVals.length;i++){
       const row=[];
       for(let j=0;j<bVals.length;j++){
-        const a=aVals[i],b=bVals[j];
-        let sse=0,dSda=0,dSdb=0;
+        const a=aVals[i], b=bVals[j];
+        let sse=0;
         dataset.forEach(p=>{
           const fx=g(a,b,p.x);
           sse += Math.pow(fx-p.y,2);
-          dSda += 2*(fx-p.y)*dfda(a,b,p.x);
-          dSdb += 2*(fx-p.y)*dfdb(a,b,p.x);
         });
         row.push(sse);
-        // gradient vector
-        let mag=Math.sqrt(dSda*dSda+dSdb*dSdb);
-        maxGrad=Math.max(maxGrad,mag);
-        gradX.push({a:a,b:b,u:dSda,v:dSdb,mag:mag});
       }
       zValues.push(row);
     }
+    Plotly.newPlot("surfacePlot",[{
+      type:"surface",x:aVals,y:bVals,z:zValues,colorscale:"Viridis",opacity:0.9,name:"SSE Surface"
+    }],{title:`SSE Surface for ${chosen}`,scene:{xaxis:{title:"a"},yaxis:{title:"b"},zaxis:{title:"SSE"}}});
+  }
 
-    // Build vector field with fixed visual length but color-coded
-    let arrows={type:"scatter",mode:"lines",x:[],y:[],line:{width:2,color:""}};
-    const scale=0.4;
+  // --- 5. Gradient vector field (separate 2D graph) ---
+  function plotGradientField(){
+    let gradX=[];
+    let maxGrad=0;
+    for(let i=0;i<aVals.length;i++){
+      for(let j=0;j<bVals.length;j++){
+        const a=aVals[i], b=bVals[j];
+        let dSda=0, dSdb=0;
+        dataset.forEach(p=>{
+          const fx=g(a,b,p.x);
+          dSda += 2*(fx-p.y)*dfda(a,b,p.x);
+          dSdb += 2*(fx-p.y)*dfdb(a,b,p.x);
+        });
+        const mag = Math.sqrt(dSda*dSda + dSdb*dSdb);
+        maxGrad=Math.max(maxGrad,mag);
+        gradX.push({a,b,u:dSda,v:dSdb,mag:mag});
+      }
+    }
+
+    // Prepare vectors
+    const arrows={type:"scatter",mode:"lines",x:[],y:[],line:{width:2,color:""}};
+    const scale = 0.4;
     gradX.forEach(v=>{
-      const norm=Math.sqrt(v.u*v.u+v.v*v.v);
-      const u=scale*v.u/norm;
-      const w=scale*v.v/norm;
-      const t=v.mag/maxGrad;
-      const color=`rgb(${Math.floor(255*t)},0,${Math.floor(255*(1-t))})`;
-
+      const norm = Math.sqrt(v.u*v.u + v.v*v.v);
+      const u = scale*v.u/norm;
+      const w = scale*v.v/norm;
+      const t = v.mag/maxGrad;
+      const color = `rgb(${Math.floor(255*t)},0,${Math.floor(255*(1-t))})`;
       arrows.x.push(v.a,v.a+u,null);
       arrows.y.push(v.b,v.b+w,null);
       arrows.line.color=color;
     });
 
-    // Plot SSE surface and vector field
-    Plotly.newPlot("surfacePlot",[
-      {type:"surface",x:aVals,y:bVals,z:zValues,colorscale:"Viridis",opacity:0.9,name:"SSE Surface"},
-      arrows
-    ],{title:`SSE Surface + Gradient Field for ${chosen}`,scene:{xaxis:{title:"a"},yaxis:{title:"b"},zaxis:{title:"SSE"}}});
+    Plotly.newPlot("gradVectorField",[arrows],{
+      title:"Gradient Vector Field of SSE",
+      xaxis:{title:"a"},
+      yaxis:{title:"b"},
+      showlegend:false
+    });
   }
 
-  plotSSEandGrad();
+  // --- 6. Initial plot ---
+  plotSSE();
+  plotGradientField();
 
-  // ---------------------------
-  // 5. Buttons for points update
-  // ---------------------------
+  // --- 7. Button handlers ---
   document.getElementById("resetBtn").onclick=()=>{
     generatePoints();
     pointsTrace.x = dataset.map(p=>p.x);
@@ -198,7 +205,8 @@
     layout2D.yaxis.range=[Math.min(...dataset.map(p=>p.y))-1,Math.max(...dataset.map(p=>p.y))+1];
     Plotly.react("function2D",[funcTrace,pointsTrace],layout2D);
     updateTable();
-    plotSSEandGrad();
+    plotSSE();
+    plotGradientField();
   };
 
   document.getElementById("randomBtn").onclick=()=>{
@@ -208,7 +216,8 @@
     layout2D.yaxis.range=[Math.min(...dataset.map(p=>p.y))-1,Math.max(...dataset.map(p=>p.y))+1];
     Plotly.react("function2D",[funcTrace,pointsTrace],layout2D);
     updateTable();
-    plotSSEandGrad();
+    plotSSE();
+    plotGradientField();
   };
 </script>
 </body>
