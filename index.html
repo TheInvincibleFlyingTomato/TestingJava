@@ -1,191 +1,198 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>TEST2</title>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
-  <style>
-    body {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr 1fr;
-      gap: 20px;
-      height: 100vh;
-      margin: 0;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-
-
-    .plot { width: 100%; height: 100%; }
-    #functionWrapper { display: flex; flex-direction: row; align-items: stretch; width: 100%; height: 100%; }
-    #leftSide { flex: 3; display: flex; flex-direction: column; }
-    #function2D { flex: 1; width: 100%; }
-    #controls { margin-top: 10px; }
-    #rightSide { flex: 1; display: flex; flex-direction: column; margin-left: 15px; }
-    button { margin: 5px 0; padding: 6px 12px; border-radius: 8px; border: none; background: #0077cc; color: white; cursor: pointer; }
-    button:hover { background: #005fa3; }
-    #tableWrapper { flex: 1; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 10px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: center; }
-    th { background: #f0f0f0; position: sticky; top: 0; }
-  </style>
+<meta charset="UTF-8">
+<title>Regression SSE Surface</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+<style>
+  body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 20px;
+    height: 100vh;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  .plot { width: 100%; height: 100%; }
+  #functionWrapper { display: flex; flex-direction: row; align-items: stretch; width: 100%; height: 100%; }
+  #leftSide { flex: 3; display: flex; flex-direction: column; }
+  #function2D { flex: 1; width: 100%; }
+  #controls { margin-top: 10px; }
+  #rightSide { flex: 1; display: flex; flex-direction: column; margin-left: 15px; }
+  button { margin: 5px 0; padding: 6px 12px; border-radius: 8px; border: none; background: #0077cc; color: white; cursor: pointer; }
+  button:hover { background: #005fa3; }
+  #tableWrapper { flex: 1; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 10px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: center; }
+  th { background: #f0f0f0; position: sticky; top: 0; }
+</style>
 </head>
 <body>
 
-  <div id="surfacePlot" class="plot"></div>
-  <div id="vectorField" class="plot"></div>
+<div id="surfacePlot" class="plot"></div>
 
-  <!-- Function graph + table -->
-  <div id="functionWrapper">
-    <div id="leftSide">
-      <div id="function2D"></div>
-      <div id="controls">
-        <button id="resetBtn">Reset Points</button>
-        <button id="randomBtn">Generate 6 Random Points</button>
-      </div>
-    </div>
-    <div id="rightSide">
-      <div id="tableWrapper">
-        <table id="pointsTable">
-          <thead>
-            <tr><th>#</th><th>x</th><th>y</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+<div id="functionWrapper">
+  <div id="leftSide">
+    <div id="function2D"></div>
+    <div id="controls">
+      <button id="resetBtn">Reset Points</button>
+      <button id="randomBtn">Generate 6 Random Points</button>
+      <button id="showCurveBtn">Show Curve</button>
     </div>
   </div>
+  <div id="rightSide">
+    <div id="tableWrapper">
+      <table id="pointsTable">
+        <thead>
+          <tr><th>#</th><th>x</th><th>y</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
 <script>
-  //---------------------------------
-  // 1. 3D Surface
-  //---------------------------------
-  const f = math.parse("sin(sqrt(x^2 + y^2))").compile();
-  let xValues = math.range(-5, 5.5, 0.5).toArray();
-  let yValues = math.range(-5, 5.5, 0.5).toArray();
-  let zValues = [];
-  for (let i = 0; i < xValues.length; i++) {
-    let row = [];
-    for (let j = 0; j < yValues.length; j++) {
-      row.push(f.evaluate({x: xValues[i], y: yValues[j]}));
-    }
-    zValues.push(row);
-  }
-  Plotly.newPlot("surfacePlot", [{
-    type: "surface", x: xValues, y: yValues, z: zValues, colorscale: "Viridis"
-  }], {title: "3D Surface f(x,y)"});
-
-  //---------------------------------
-  // 2. Vector Field
-  //---------------------------------
-  const uExpr = math.parse("-y").compile();
-  const vExpr = math.parse("x").compile();
-  let X=[],Y=[],U=[],V=[];
-  for(let i=-5;i<=5;i++){
-    for(let j=-5;j<=5;j++){
-      X.push(i); Y.push(j);
-      U.push(uExpr.evaluate({x:i,y:j}));
-      V.push(vExpr.evaluate({x:i,y:j}));
-    }
-  }
-  let arrows = {type:"scatter",mode:"lines+markers",x:[],y:[],line:{width:2,color:"blue"},marker:{size:2}};
-  for(let k=0;k<X.length;k++){
-    arrows.x.push(X[k], X[k]+U[k], null);
-    arrows.y.push(Y[k], Y[k]+V[k], null);
-  }
-  Plotly.newPlot("vectorField",[arrows],{title:"Vector Field (u,v)", xaxis:{scaleanchor:"y"},yaxis:{scaleanchor:"x"}});
-
-  //---------------------------------
-  // 3. 2D Function + Points
-  //---------------------------------
-  const forms = [
-    "A*B^x",
-    "A*x^B",
-    "A*log(x)+B"
-  ];
+  // ---------------------------
+  // 1. Choose function type
+  // ---------------------------
+  const forms = ["A*B^x", "A*x^B", "A*log(x)+B"];
   const chosen = forms[Math.floor(Math.random() * forms.length)];
-  const A = (Math.random()*3+1).toFixed(2);
-  const B = (Math.random()*3+1).toFixed(2);
-  const exprStr = chosen.replace(/A/g,A).replace(/B/g,B);
-  const g = math.parse(exprStr).compile();
+  const A0 = (Math.random()*3+1).toFixed(2);
+  const B0 = (Math.random()*3+1).toFixed(2);
 
-  // Determine x-range
-  let xStart = chosen.includes("log(x)") ? 1 : 0;
-  let xEnd = 6;
+  const exprStr = chosen.replace(/A/g,A0).replace(/B/g,B0);
+  let g;
+  if(chosen === "A*B^x") g = (a,b,x)=>a*Math.pow(b,x);
+  else if(chosen === "A*x^B") g = (a,b,x)=>a*Math.pow(x,b);
+  else g = (a,b,x)=>a*Math.log(x)+b;
 
-  const xLine = math.range(xStart, xEnd, 0.1).toArray();
-  const yLine = xLine.map(x => g.evaluate({x}));
+  // ---------------------------
+  // 2. Generate sample points
+  // ---------------------------
+  const xStart = chosen.includes("log(x)") ? 1 : 0;
+  const xEnd = 10;
+  let dataset = [];
+  const nPoints = 6;
+  const scale = 0.05;
+  const minError = 0.1;
 
-  const funcTrace = { type:"scatter", mode:"lines", x:xLine, y:yLine, line:{color:"red"}, name:`g(x) = ${exprStr}`, visible: false  };
-  const pointsTrace = { type:"scatter", mode:"markers", x:[], y:[], marker:{color:"black", size:8}, name:"Sample Points" };
+  function generatePoints() {
+    dataset = [];
+    for(let i=0;i<nPoints;i++){
+      const x = Math.random()*(xEnd-xStart)+xStart;
+      const trueY = g(parseFloat(A0),parseFloat(B0),x);
+      const errMagnitude = Math.max(scale*Math.abs(trueY),minError);
+      const y = trueY + (Math.random()-0.5)*2*errMagnitude;
+      dataset.push({x,y});
+    }
+  }
 
-  let yMin = Math.min(...yLine);
-  let yMax = Math.max(...yLine);
-  let xMin = xStart;
-  let xMax = xEnd;
-  let yMinPlot = Math.min(...yLine.concat(pointsTrace.y)) - 1; // padding
-  let yMaxPlot = Math.max(...yLine.concat(pointsTrace.y)) + 1;
+  generatePoints();
 
-  let layout2D = {
-    title: `Regression`,
-    dragmode: false,
-    xaxis: { range: [xMin, xMax] },
-    yaxis: { range: [yMinPlot, yMaxPlot] }
+  // ---------------------------
+  // 3. 2D Plot with points (curve hidden initially)
+  // ---------------------------
+  const xLine = [];
+  for(let x=xStart;x<=xEnd;x+=0.1) xLine.push(x);
+
+  const yLine = xLine.map(x=>g(parseFloat(A0),parseFloat(B0),x));
+
+  const funcTrace = {
+    type:"scatter",
+    mode:"lines",
+    x:xLine,
+    y:yLine,
+    line:{color:"red"},
+    name:`g(x) = ${exprStr}`,
+    visible:false
   };
 
+  const pointsTrace = {
+    type:"scatter",
+    mode:"markers",
+    x:dataset.map(p=>p.x),
+    y:dataset.map(p=>p.y),
+    marker:{color:"black", size:8},
+    name:"Sample Points"
+  };
 
-  Plotly.newPlot("function2D",[funcTrace, pointsTrace], layout2D);
+  const layout2D = {
+    title:`2D Function g(x) = ${exprStr}`,
+    dragmode:false,
+    xaxis:{range:[xStart,xEnd]},
+    yaxis:{range:[Math.min(...dataset.map(p=>p.y))-1, Math.max(...dataset.map(p=>p.y))+1]}
+  };
 
-  let dataset = [];
+  Plotly.newPlot("function2D",[funcTrace, pointsTrace],layout2D);
+
   function updateTable(){
     const tbody = document.querySelector("#pointsTable tbody");
-    tbody.innerHTML = "";
-    dataset.forEach((pt,i)=>{
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${i+1}</td><td>${pt.x.toFixed(3)}</td><td>${pt.y.toFixed(3)}</td>`;
+    tbody.innerHTML="";
+    dataset.forEach((p,i)=>{
+      const row=document.createElement("tr");
+      row.innerHTML=`<td>${i+1}</td><td>${p.x.toFixed(3)}</td><td>${p.y.toFixed(3)}</td>`;
       tbody.appendChild(row);
     });
   }
 
-  // Reset
+  updateTable();
+
   document.getElementById("resetBtn").onclick = ()=>{
-    dataset = [];
-    pointsTrace.x = [];
-    pointsTrace.y = [];
+    generatePoints();
+    pointsTrace.x = dataset.map(p=>p.x);
+    pointsTrace.y = dataset.map(p=>p.y);
+    layout2D.yaxis.range = [Math.min(...dataset.map(p=>p.y))-1, Math.max(...dataset.map(p=>p.y))+1];
     Plotly.react("function2D",[funcTrace, pointsTrace],layout2D);
     updateTable();
   };
 
-  // Random points with proportional + minimum error
   document.getElementById("randomBtn").onclick = ()=>{
-    dataset = [];
-    pointsTrace.x = [];
-    pointsTrace.y = [];
-    const scale = 0.15;  // 15% proportional error
-    const minError = 0.1; // minimum absolute error
-
-    for(let i=0;i<6;i++){
-      const x = Math.random()*(xEnd-xStart)+xStart;
-      const trueY = g.evaluate({x});
-      const errMagnitude = Math.max(scale*Math.abs(trueY), minError);
-      const err = (Math.random()-0.5)*2*errMagnitude;
-      const y = trueY + err;
-      dataset.push({x,y});
-      pointsTrace.x.push(x);
-      pointsTrace.y.push(y);
-    }
-
-    // Recompute y-axis range with points included
-    const allY = yLine.concat(pointsTrace.y);
-    const newYMin = Math.min(...allY);
-    const newYMax = Math.max(...allY);
-    layout2D.yaxis.range = [newYMin-(newYMax-newYMin)*0.1, newYMax+(newYMax-newYMin)*0.1];
-
+    generatePoints();
+    pointsTrace.x = dataset.map(p=>p.x);
+    pointsTrace.y = dataset.map(p=>p.y);
+    layout2D.yaxis.range = [Math.min(...dataset.map(p=>p.y))-1, Math.max(...dataset.map(p=>p.y))+1];
     Plotly.react("function2D",[funcTrace, pointsTrace],layout2D);
     updateTable();
   };
+
+  document.getElementById("showCurveBtn").onclick = ()=>{
+    Plotly.restyle("function2D",{visible:true},[0]);
+  };
+
+  // ---------------------------
+  // 4. 3D SSE Surface
+  // ---------------------------
+  const aMin=0.5, aMax=5, aStep=0.2;
+  const bMin=0.5, bMax=5, bStep=0.2;
+  const aVals = math.range(aMin,aMax,aStep).toArray();
+  const bVals = math.range(bMin,bMax,bStep).toArray();
+
+  const zValues = [];
+  for(let i=0;i<aVals.length;i++){
+    const row=[];
+    for(let j=0;j<bVals.length;j++){
+      const a=aVals[i];
+      const b=bVals[j];
+      let sse=0;
+      dataset.forEach(p=>{
+        sse += Math.pow(g(a,b,p.x)-p.y,2);
+      });
+      row.push(sse);
+    }
+    zValues.push(row);
+  }
+
+  Plotly.newPlot("surfacePlot",[{
+    type:"surface",
+    x:aVals,
+    y:bVals,
+    z:zValues,
+    colorscale:"Viridis"
+  }],{title:`SSE Surface for ${chosen}`});
 
 </script>
 </body>
