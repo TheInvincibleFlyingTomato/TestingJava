@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Interactive Graphs</title>
+  <title>Interactive Graphs with Sample Table</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
   <style>
@@ -22,8 +22,15 @@
     }
     #functionWrapper {
       display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      width: 100%;
+      height: 100%;
+    }
+    #leftSide {
+      flex: 3;
+      display: flex;
       flex-direction: column;
-      align-items: center;
     }
     #function2D {
       flex: 1;
@@ -32,8 +39,14 @@
     #controls {
       margin-top: 10px;
     }
+    #rightSide {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin-left: 15px;
+    }
     button {
-      margin: 5px;
+      margin: 5px 0;
       padding: 6px 12px;
       border-radius: 8px;
       border: none;
@@ -44,16 +57,51 @@
     button:hover {
       background: #005fa3;
     }
+    #tableWrapper {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px 10px;
+      text-align: center;
+    }
+    th {
+      background: #f0f0f0;
+      position: sticky;
+      top: 0;
+    }
   </style>
 </head>
 <body>
   <div id="surfacePlot" class="plot"></div>
   <div id="vectorField" class="plot"></div>
+
+  <!-- Function graph + table side by side -->
   <div id="functionWrapper">
-    <div id="function2D"></div>
-    <div id="controls">
-      <button id="resetBtn">Reset Points</button>
-      <button id="randomBtn">Add 10 Random Points</button>
+    <div id="leftSide">
+      <div id="function2D"></div>
+      <div id="controls">
+        <button id="resetBtn">Reset Points</button>
+        <button id="randomBtn">Generate 10 Random Points</button>
+      </div>
+    </div>
+    <div id="rightSide">
+      <div id="tableWrapper">
+        <table id="pointsTable">
+          <thead>
+            <tr><th>#</th><th>x</th><th>y</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -106,28 +154,28 @@
     Plotly.newPlot("vectorField", [arrows], {title:"Vector Field (u,v)", xaxis:{scaleanchor:"y"}, yaxis:{scaleanchor:"x"}});
 
     //---------------------------------
-    // 3. Function + Interactive Points
+    // 3. Function + Sample Points
     //---------------------------------
     let xLine = math.range(-10, 10, 0.1).toArray();
     let yLine = xLine.map(x => g.evaluate({x}));
 
     let funcTrace = { type:"scatter", mode:"lines", x:xLine, y:yLine, line:{color:"red"}, name:"g(x)" };
-    let pointsTrace = { type:"scatter", mode:"markers", x:[], y:[], marker:{color:"black", size:8}, name:"Points" };
+    let pointsTrace = { type:"scatter", mode:"markers", x:[], y:[], marker:{color:"black", size:8}, name:"Sample Points" };
 
     Plotly.newPlot("function2D", [funcTrace, pointsTrace], {title:"2D Function g(x)"});
 
     let dataset = [];
 
-    // Handle clicks on the function plot
-    document.getElementById("function2D").on('plotly_click', function(data) {
-      let x = data.points[0].x;
-      let y = data.points[0].y;
-      dataset.push({x,y});
-      pointsTrace.x.push(x);
-      pointsTrace.y.push(y);
-      Plotly.redraw("function2D");
-      console.log("Dataset:", dataset);
-    });
+    // Helper to update the table
+    function updateTable() {
+      const tbody = document.querySelector("#pointsTable tbody");
+      tbody.innerHTML = "";
+      dataset.forEach((pt, i) => {
+        let row = document.createElement("tr");
+        row.innerHTML = `<td>${i+1}</td><td>${pt.x.toFixed(3)}</td><td>${pt.y.toFixed(3)}</td>`;
+        tbody.appendChild(row);
+      });
+    }
 
     // Reset button
     document.getElementById("resetBtn").onclick = () => {
@@ -135,11 +183,14 @@
       pointsTrace.x = [];
       pointsTrace.y = [];
       Plotly.redraw("function2D");
-      console.log("Dataset cleared.");
+      updateTable();
     };
 
-    // Add 10 random points button
+    // Generate 10 random points (reset + add new points)
     document.getElementById("randomBtn").onclick = () => {
+      dataset = [];
+      pointsTrace.x = [];
+      pointsTrace.y = [];
       for (let i = 0; i < 10; i++) {
         let x = -10 + Math.random()*20;
         let y = g.evaluate({x});
@@ -148,9 +199,8 @@
         pointsTrace.y.push(y);
       }
       Plotly.redraw("function2D");
-      console.log("Dataset:", dataset);
+      updateTable();
     };
-
   </script>
 </body>
 </html>
