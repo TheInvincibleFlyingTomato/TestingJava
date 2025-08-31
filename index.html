@@ -161,10 +161,33 @@ let gdPoint={a:Math.random()*4+0.5,b:Math.random()*4+0.5};
 let trailX=[gdPoint.a], trailY=[gdPoint.b], trailZ=[computeSSE(gdPoint.a,gdPoint.b)];
 
 function plotGDPoint(){
-    Plotly.react("surfacePlot",[
-        {type:"surface",x:aVals,y:bVals,z:aVals.map((_,i)=>bVals.map((_,j)=>computeSSE(aVals[i],bVals[j]))),colorscale:"Viridis",opacity:0.9},
-        {type:"scatter3d",mode:"lines+markers",x:trailX,y:trailY,z:trailZ,marker:{size:4,color:"red"},line:{color:"red",width:3}}
-    ]);
+    const surfaceTrace = {
+        type: "surface",
+        x: aVals,
+        y: bVals,
+        z: aVals.map((_,i) => bVals.map((_,j) => computeSSE(aVals[i], bVals[j]))),
+        colorscale: "Viridis",
+        opacity: 0.9
+    };
+
+    const gdTrace = {
+        type: "scatter3d",
+        mode: "lines+markers",
+        x: trailX,
+        y: trailY,
+        z: trailZ,
+        marker: { size: 5, color: "red", symbol: "circle" },
+        line: { color: "red", width: 4 }
+    };
+
+    // Put gdTrace *after* surfaceTrace so it’s always on top
+    Plotly.react("surfacePlot", [surfaceTrace, gdTrace], {
+        scene: {
+            xaxis: { title: "a" },
+            yaxis: { title: "b" },
+            zaxis: { title: "SSE" }
+        }
+    });
 }
 
 function formatEquation(a, b) {
