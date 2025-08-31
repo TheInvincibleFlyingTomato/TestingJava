@@ -176,8 +176,8 @@ th { background: #f0f0f0; position: sticky; top: 0; }
   const headSize=0.05; // size of arrowhead
   gradX.forEach(v=>{
     const norm=Math.sqrt(v.u*v.u + v.v*v.v);
-    const u=scale*v.u/norm;
-    const w=scale*v.v/norm;
+    const u=-1*scale*v.u/norm;
+    const w=-1*scale*v.v/norm;
 
     // Color mapping
     let t=Math.pow(v.mag/maxGrad,2);
