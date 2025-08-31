@@ -154,44 +154,51 @@ th { background: #f0f0f0; position: sticky; top: 0; }
 
   // --- 5. Gradient vector field (separate 2D graph) ---
   function plotGradientField(){
-    let gradX=[];
-    let maxGrad=0;
-    for(let i=0;i<aVals.length;i++){
-      for(let j=0;j<bVals.length;j++){
-        const a=aVals[i], b=bVals[j];
-        let dSda=0, dSdb=0;
-        dataset.forEach(p=>{
-          const fx=g(a,b,p.x);
-          dSda += 2*(fx-p.y)*dfda(a,b,p.x);
-          dSdb += 2*(fx-p.y)*dfdb(a,b,p.x);
-        });
-        const mag = Math.sqrt(dSda*dSda + dSdb*dSdb);
-        maxGrad=Math.max(maxGrad,mag);
-        gradX.push({a,b,u:dSda,v:dSdb,mag:mag});
-      }
+  let gradX=[];
+  let maxGrad=0;
+  // Compute gradients and find true max
+  for(let i=0;i<aVals.length;i++){
+    for(let j=0;j<bVals.length;j++){
+      const a=aVals[i], b=bVals[j];
+      let dSda=0, dSdb=0;
+      dataset.forEach(p=>{
+        const fx=g(a,b,p.x);
+        dSda += 2*(fx-p.y)*dfda(a,b,p.x);
+        dSdb += 2*(fx-p.y)*dfdb(a,b,p.x);
+      });
+      const mag = Math.sqrt(dSda*dSda + dSdb*dSdb);
+      maxGrad = Math.max(maxGrad,mag);
+      gradX.push({a,b,u:dSda,v:dSdb,mag:mag});
     }
-
-    // Prepare vectors
-    const arrows={type:"scatter",mode:"lines",x:[],y:[],line:{width:2,color:""}};
-    const scale = 0.4;
-    gradX.forEach(v=>{
-      const norm = Math.sqrt(v.u*v.u + v.v*v.v);
-      const u = scale*v.u/norm;
-      const w = scale*v.v/norm;
-      const t = v.mag/maxGrad;
-      const color = `rgb(${Math.floor(255*t)},0,${Math.floor(255*(1-t))})`;
-      arrows.x.push(v.a,v.a+u,null);
-      arrows.y.push(v.b,v.b+w,null);
-      arrows.line.color=color;
-    });
-
-    Plotly.newPlot("gradVectorField",[arrows],{
-      title:"Gradient Vector Field of SSE",
-      xaxis:{title:"a"},
-      yaxis:{title:"b"},
-      showlegend:false
-    });
   }
+
+  // Prepare vectors
+  const arrows={type:"scatter",mode:"lines",x:[],y:[],line:{width:2,color:""}};
+  const scale = 0.2; // smaller visual length
+  gradX.forEach(v=>{
+    const norm = Math.sqrt(v.u*v.u + v.v*v.v);
+    const u = scale*v.u/norm;
+    const w = scale*v.v/norm;
+
+    // Non-linear color mapping: only top 25% get fully red
+    let t = v.mag/maxGrad;
+    t = Math.pow(t,2); // exaggerate differences
+    const r = Math.floor(255*t);
+    const b = Math.floor(255*(1-t));
+    const color = `rgb(${r},0,${b})`;
+
+    arrows.x.push(v.a,v.a+u,null);
+    arrows.y.push(v.b,v.b+w,null);
+    arrows.line.color=color;
+  });
+
+  Plotly.newPlot("gradVectorField",[arrows],{
+    title:"Gradient Vector Field of SSE",
+    xaxis:{title:"a"},
+    yaxis:{title:"b"},
+    showlegend:false
+  });
+}
 
   // --- 6. Initial plot ---
   plotSSE();
