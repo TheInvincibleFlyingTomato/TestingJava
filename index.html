@@ -255,11 +255,11 @@ function plotGDPoint(){
 
 function formatEquation(a, b) {
     if (chosen === "A*B^x") {
-        return `y = ${a.toFixed(3)} * (${b.toFixed(3)})^x`;
+        return `y = ${a.toFixed(3)} \\cdot (${b.toFixed(3)})^x`;
     } else if (chosen === "A*x^B") {
-        return `y = ${a.toFixed(3)} * x^(${b.toFixed(3)})`;
+        return `y = ${a.toFixed(3)} \\cdot x^{${b.toFixed(3)}}`;
     } else { // A*log(x)+B
-        return `y = ${a.toFixed(3)} * log(x) + ${b.toFixed(3)}`;
+        return `y = ${a.toFixed(3)} \\cdot \\log(x) + ${b.toFixed(3)}`;
     }
 }
 
@@ -300,10 +300,10 @@ function plot2DCurrentCurve() {
         ...layout2D,
         annotations: [{
             xref: "paper", yref: "paper",
-            x: 0.5, y: 1.15,  // centered above the plot
-            text: `${eqn}   |   R² = ${r2.toFixed(4)}`,
+            x: 0.5, y: 1.15,  // centered above plot
+            text: `$${eqn}, \\; R^2 = ${r2.toFixed(4)}$`,
             showarrow: false,
-            font: { size: 16, color: "blue" },
+            font: { size: 18, color: "black" }, // black text
             align: "center"
         }]
     });
