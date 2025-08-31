@@ -153,10 +153,27 @@
     }
     Plotly.newPlot("vectorField", [arrows], {title:"Vector Field (u,v)", xaxis:{scaleanchor:"y"}, yaxis:{scaleanchor:"x"}});
 
-   //---------------------------------
-  // 3. Function + Sample Points
-  //---------------------------------
-  let xLine = math.range(-10, 10, 0.1).toArray();
+//---------------------------------
+// 3. Function + Sample Points
+//---------------------------------
+
+  // Pick a random function form
+  const forms = ["ab^x", "ax^b", "a*ln(x)+b"];
+  const chosen = forms[Math.floor(Math.random() * forms.length)];
+
+  // Random coefficients
+  const a = (Math.random() * 3 + 1).toFixed(2);  // between 1 and 4
+  const b = (Math.random() * 3 + 1).toFixed(2);  // between 1 and 4
+
+  let exprStr = chosen
+    .replace("a", a)
+    .replace("b", b);
+
+  // Compile chosen function
+  const g = math.parse(exprStr).compile();
+
+  // Sample curve
+  let xLine = math.range(1, 10, 0.1).toArray();
   let yLine = xLine.map(x => g.evaluate({x}));
 
   let funcTrace = {
@@ -165,7 +182,7 @@
     x: xLine,
     y: yLine,
     line: { color: "red" },
-    name: "g(x)"
+    name: `g(x) = ${exprStr}`
   };
 
   let pointsTrace = {
@@ -178,10 +195,10 @@
   };
 
   let layout2D = {
-    title: "2D Function g(x)",
+    title: `2D Function g(x) = ${exprStr}`,
     dragmode: false,
-    xaxis: { range: [-5, 15] },   // put 0 near bottom-left
-    yaxis: { range: [-2, 25] }    // adjust as needed for your g(x)
+    xaxis: { range: [0, 10] },
+    yaxis: { range: [0, 20] }
   };
 
   Plotly.newPlot("function2D", [funcTrace, pointsTrace], layout2D);
@@ -198,7 +215,7 @@
     });
   }
 
-  // Reset button clears all points
+  // Reset button
   document.getElementById("resetBtn").onclick = () => {
     dataset = [];
     pointsTrace.x = [];
@@ -207,18 +224,22 @@
     updateTable();
   };
 
-  // Random button generates 6 random points (uniform in box)
+  // Random button generates 6 points near curve
   document.getElementById("randomBtn").onclick = () => {
     dataset = [];
     pointsTrace.x = [];
     pointsTrace.y = [];
+
     for (let i = 0; i < 6; i++) {
-      let x = Math.random() * 10;   // within [0,10]
-      let y = Math.random() * 20;   // within [0,20]
+      let x = Math.random() * 9 + 1; // between 1 and 10
+      let trueY = g.evaluate({x});
+      let err = (Math.random() - 0.5) * 0.5; // -0.25 to +0.25
+      let y = trueY + err;
       dataset.push({ x, y });
       pointsTrace.x.push(x);
       pointsTrace.y.push(y);
     }
+
     Plotly.redraw("function2D");
     updateTable();
   };
