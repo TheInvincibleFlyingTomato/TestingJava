@@ -176,25 +176,40 @@ function plot2DCurrentCurve(){
 }
 
 // --- Step button ---
-const stepSize=0.25;
-document.getElementById("stepBtn").onclick=()=>{
-    let dSda=0,dSdb=0;
-    dataset.forEach(p=>{
-        const fx=g(gdPoint.a,gdPoint.b,p.x);
-        dSda+=2*(fx-p.y)*dfda(gdPoint.a,gdPoint.b,p.x);
-        dSdb+=2*(fx-p.y)*dfdb(gdPoint.a,gdPoint.b,p.x);
+let stepCount = 0;  // track number of steps
+
+document.getElementById("stepBtn").onclick = () => {
+    // Compute gradient at current point
+    let dSda = 0, dSdb = 0;
+    dataset.forEach(p => {
+        const fx = g(gdPoint.a, gdPoint.b, p.x);
+        dSda += 2 * (fx - p.y) * dfda(gdPoint.a, gdPoint.b, p.x);
+        dSdb += 2 * (fx - p.y) * dfdb(gdPoint.a, gdPoint.b, p.x);
     });
-    const norm=Math.sqrt(dSda*dSda+dSdb*dSdb);
-    if(norm>0){
-        gdPoint.a -= stepSize*dSda/norm;
-        gdPoint.b -= stepSize*dSdb/norm;
+
+    // Normalize gradient (unit direction)
+    const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
+    if (norm > 0) {
+        const unitU = -dSda / norm;  // steepest descent
+        const unitV = -dSdb / norm;
+
+        // Step size decays as (0.25 * (0.9^n))
+        const stepSize = 0.25 * Math.pow(0.9, stepCount);
+
+        // Update point
+        gdPoint.a += stepSize * unitU;
+        gdPoint.b += stepSize * unitV;
     }
+
+    stepCount++;
+
+    // Update plots
     trailX.push(gdPoint.a);
     trailY.push(gdPoint.b);
-    trailZ.push(computeSSE(gdPoint.a,gdPoint.b));
+    trailZ.push(computeSSE(gdPoint.a, gdPoint.b));
     plotGDPoint();
     plot2DCurrentCurve();
-}
+};
 
 // --- Initial plots ---
 plotSSE();
