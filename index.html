@@ -123,12 +123,18 @@
 
   let yMin = Math.min(...yLine);
   let yMax = Math.max(...yLine);
+  let xMin = xStart;
+  let xMax = xEnd;
+  let yMinPlot = Math.min(...yLine.concat(pointsTrace.y)) - 1; // padding
+  let yMaxPlot = Math.max(...yLine.concat(pointsTrace.y)) + 1;
+
   let layout2D = {
-    title:`2D Function g(x) = ${exprStr}`,
-    dragmode:false,
-    xaxis:{range:[xStart,xEnd]},
-    yaxis:{range:[yMin-(yMax-yMin)*0.1, yMax+(yMax-yMin)*0.1]}
+    title: `2D Function g(x) = ${exprStr}`,
+    dragmode: false,
+    xaxis: { range: [xMin, xMax] },
+    yaxis: { range: [yMinPlot, yMaxPlot] }
   };
+
 
   Plotly.newPlot("function2D",[funcTrace, pointsTrace], layout2D);
 
