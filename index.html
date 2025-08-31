@@ -159,7 +159,6 @@
   let xLine = math.range(-10, 10, 0.1).toArray();
   let yLine = xLine.map(x => g.evaluate({x}));
 
-  // Function curve
   let funcTrace = {
     type: "scatter",
     mode: "lines",
@@ -169,7 +168,6 @@
     name: "g(x)"
   };
 
-  // Sample points
   let pointsTrace = {
     type: "scatter",
     mode: "markers",
@@ -179,40 +177,38 @@
     name: "Sample Points"
   };
 
-  // Invisible background layer to capture clicks
-  let clickCatcher = {
-    type: "scatter",
-    mode: "markers",
-    x: [-10, 10],
-    y: [-10, 10],
-    marker: { opacity: 0 },
-    showlegend: false,
-    hoverinfo: "skip"
-  };
-
   let layout2D = {
     title: "2D Function g(x)",
-    dragmode: false,   
+    dragmode: false,
     xaxis: { range: [-10, 10] },
     yaxis: { range: [-10, 10] }
   };
 
-  Plotly.newPlot("function2D", [funcTrace, pointsTrace, clickCatcher], layout2D);
+  Plotly.newPlot("function2D", [funcTrace, pointsTrace], layout2D);
 
   let dataset = [];
 
-  // Click handler for adding points (anywhere in plot area)
-  document.getElementById("function2D").on('plotly_click', (data) => {
-    let x = data.points[0].x;
-    let y = data.points[0].y;
-    dataset.push({ x, y });
-    pointsTrace.x.push(x);
-    pointsTrace.y.push(y);
-    Plotly.redraw("function2D");
-    updateTable();
+  // Convert raw click (pixels) to axis coordinates
+  document.getElementById("function2D").addEventListener("click", function(evt) {
+    let bb = this.getBoundingClientRect();
+    let xPixel = evt.clientX - bb.left;
+    let yPixel = evt.clientY - bb.top;
+
+    let xaxis = document.getElementById("function2D")._fullLayout.xaxis;
+    let yaxis = document.getElementById("function2D")._fullLayout.yaxis;
+
+    let xVal = xaxis.p2c ? xaxis.c2d(xaxis.p2l(xPixel)) : xaxis.p2c(xPixel);
+    let yVal = yaxis.p2c ? yaxis.c2d(yaxis.p2l(yPixel)) : yaxis.p2c(yPixel);
+
+    if (xVal !== undefined && yVal !== undefined) {
+      dataset.push({ x: xVal, y: yVal });
+      pointsTrace.x.push(xVal);
+      pointsTrace.y.push(yVal);
+      Plotly.redraw("function2D");
+      updateTable();
+    }
   });
 
-  // Update table
   function updateTable() {
     const tbody = document.querySelector("#pointsTable tbody");
     tbody.innerHTML = "";
@@ -223,7 +219,6 @@
     });
   }
 
-  // Reset button
   document.getElementById("resetBtn").onclick = () => {
     dataset = [];
     pointsTrace.x = [];
@@ -232,7 +227,6 @@
     updateTable();
   };
 
-  // Random points (not on curve)
   document.getElementById("randomBtn").onclick = () => {
     dataset = [];
     pointsTrace.x = [];
