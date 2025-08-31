@@ -33,7 +33,7 @@
     //-------------------------------
 
     // Multivariable function f(x,y)
-    const f = math.parse("(x+yln(3)-5)^2").compile();
+    const f = math.parse("(x+y*log(3,e)-5)^2").compile();
 
     // Vector field (u,v)
     const uExpr = math.parse("-y").compile();  // dx component
