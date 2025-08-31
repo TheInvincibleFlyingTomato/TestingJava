@@ -1,184 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Interactive Linear Regression with Axes & Data Table</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Customizable Graphs</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; display: flex; justify-content: center; }
-    #container { display: flex; gap: 20px; margin-top: 20px; }
-    #plot { border: 1px solid #ccc; background: #fafafa; }
-    .point { cursor: grab; fill: crimson; }
-    .line { stroke: steelblue; stroke-width: 2; }
-    .axis path, .axis line { stroke: #888; }
-    #table-container { max-height: 350px; overflow-y: auto; border: 1px solid #ccc; padding: 5px; }
-    table { border-collapse: collapse; width: 200px; margin: 0 auto; }
-    th, td { border: 1px solid #ccc; padding: 4px; font-size: 12px; }
-    th { background: #eee; }
+    body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 20px;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .plot {
+      width: 100%;
+      height: 100%;
+    }
   </style>
 </head>
 <body>
-  <div>
-    <h2>Interactive Linear Regression</h2>
-    <div>
-      <button id="reset">Reset</button>
-      <button id="random">Random Points</button>
-    </div>
-    <div id="container">
-      <svg id="plot" width="600" height="400"></svg>
-      <div id="table-container">
-        <table id="points-table">
-          <thead>
-            <tr><th>X</th><th>Y</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-    <p id="equation"></p>
-  </div>
+  <div id="surfacePlot" class="plot"></div>
+  <div id="vectorField" class="plot"></div>
+  <div id="function2D" class="plot"></div>
 
   <script>
-    const svg = d3.select("#plot");
-    const width = +svg.attr("width") - 60;
-    const height = +svg.attr("height") - 60;
-    const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+    //-------------------------------
+    // FUNCTIONS (edit these easily)
+    //-------------------------------
 
-    const plotArea = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    // Multivariable function f(x,y)
+    const f = math.parse("sin(sqrt(x^2 + y^2))").compile();
 
-    let points = [];
+    // Vector field (u,v)
+    const uExpr = math.parse("-y").compile();  // dx component
+    const vExpr = math.parse("x").compile();   // dy component
 
-    const xScale = d3.scaleLinear().domain([0, 600]).range([0, width]);
-    const yScale = d3.scaleLinear().domain([0, 400]).range([height, 0]);
+    // 2D function g(x)
+    const g = math.parse("cos(x)").compile();
 
-    const xAxis = d3.axisBottom(xScale);
-    const yAxis = d3.axisLeft(yScale);
+    //-------------------------------
+    // 1. 3D Surface Plot
+    //-------------------------------
+    let xValues = math.range(-5, 5.5, 0.5).toArray();
+    let yValues = math.range(-5, 5.5, 0.5).toArray();
+    let zValues = [];
 
-    plotArea.append("g")
-      .attr("class", "x axis")
-      .attr("transform", `translate(0,${height})`)
-      .call(xAxis);
-
-    plotArea.append("g")
-      .attr("class", "y axis")
-      .call(yAxis);
-
-    function render() {
-      plotArea.selectAll(".point").data(points, d => d.id)
-        .join(
-          enter => enter.append("circle")
-            .attr("class", "point")
-            .attr("r", 5)
-            .attr("cx", d => xScale(d.x))
-            .attr("cy", d => yScale(d.y))
-            .call(d3.drag()
-              .on("start", function(event, d) {
-                d3.select(this).raise().attr("stroke", "black");
-              })
-              .on("drag", function(event, d) {
-                // Adjust position relative to the plot
-                const [mouseX, mouseY] = d3.pointer(event);
-
-                // Calculate the new point coordinates
-                const newX = Math.max(0, Math.min(600, xScale.invert(mouseX)));
-                const newY = Math.max(0, Math.min(400, yScale.invert(mouseY)));
-
-                d.x = newX;
-                d.y = newY;
-
-                // Update the circle position
-                d3.select(this).attr("cx", xScale(d.x)).attr("cy", yScale(d.y));
-
-                // Recalculate and update the regression line and table
-                updateRegression();
-                updateTable();
-              })
-              .on("end", function(event, d) {
-                d3.select(this).attr("stroke", null);
-              })
-            ),
-          update => update
-            .attr("cx", d => xScale(d.x))
-            .attr("cy", d => yScale(d.y)),
-          exit => exit.remove()
-        );
-
-      updateRegression();
-      updateTable();
-    }
-
-    function updateRegression() {
-      if (points.length < 2) {
-        plotArea.selectAll(".line").remove();
-        d3.select("#equation").text("");
-        return;
+    for (let i = 0; i < xValues.length; i++) {
+      let row = [];
+      for (let j = 0; j < yValues.length; j++) {
+        row.push(f.evaluate({x: xValues[i], y: yValues[j]}));
       }
-
-      const n = points.length;
-      const meanX = d3.mean(points, d => d.x);
-      const meanY = d3.mean(points, d => d.y);
-      const num = d3.sum(points, d => (d.x - meanX) * (d.y - meanY));
-      const den = d3.sum(points, d => (d.x - meanX) ** 2);
-      const slope = num / den;
-      const intercept = meanY - slope * meanX;
-
-      const x1 = 0;
-      const y1 = slope * x1 + intercept;
-      const x2 = 600;
-      const y2 = slope * x2 + intercept;
-
-      plotArea.selectAll(".line").data([null])
-        .join("line")
-        .attr("class", "line")
-        .attr("x1", xScale(x1))
-        .attr("y1", yScale(y1))
-        .attr("x2", xScale(x2))
-        .attr("y2", yScale(y2));
-
-      d3.select("#equation").text(`y = ${slope.toFixed(2)}x + ${intercept.toFixed(2)}`);
+      zValues.push(row);
     }
 
-    function updateTable() {
-      const tbody = d3.select("#points-table tbody");
-      const rows = tbody.selectAll("tr").data(points, d => d.id);
+    Plotly.newPlot("surfacePlot", [{
+      type: "surface",
+      x: xValues,
+      y: yValues,
+      z: zValues,
+      colorscale: "Viridis"
+    }], {title: "3D Surface f(x,y)"});
 
-      rows.join(
-        enter => enter.append("tr")
-          .html(d => `<td>${d.x.toFixed(1)}</td><td>${d.y.toFixed(1)}</td>`),
-        update => update
-          .html(d => `<td>${d.x.toFixed(1)}</td><td>${d.y.toFixed(1)}</td>`),
-        exit => exit.remove()
-      );
+
+    //-------------------------------
+    // 2. Vector Field
+    //-------------------------------
+    let X = [], Y = [], U = [], V = [];
+
+    for (let i = -5; i <= 5; i++) {
+      for (let j = -5; j <= 5; j++) {
+        X.push(i);
+        Y.push(j);
+        U.push(uExpr.evaluate({x: i, y: j}));
+        V.push(vExpr.evaluate({x: i, y: j}));
+      }
     }
 
-    svg.on("click", function(event) {
-      const [offsetX, offsetY] = d3.pointer(event);
-      if (event.target.tagName === "circle") return;
+    let arrows = {
+      type: "scatter",
+      mode: "lines+markers",
+      x: [],
+      y: [],
+      line: {width: 2, color: "blue"},
+      marker: {size: 2}
+    };
 
-      const x = xScale.invert(offsetX - margin.left);
-      const y = yScale.invert(offsetY - margin.top);
+    for (let k = 0; k < X.length; k++) {
+      arrows.x.push(X[k], X[k] + U[k], null);
+      arrows.y.push(Y[k], Y[k] + V[k], null);
+    }
 
-      if (x < 0 || x > 600 || y < 0 || y > 400) return;
-
-      points.push({ id: Date.now() + Math.random(), x, y });
-      render();
+    Plotly.newPlot("vectorField", [arrows], {
+      title: "Vector Field (u,v)",
+      xaxis: {scaleanchor: "y"},
+      yaxis: {scaleanchor: "x"}
     });
 
-    d3.select("#reset").on("click", () => {
-      points = [];
-      render();
-    });
 
-    d3.select("#random").on("click", () => {
-      points = d3.range(10).map(() => ({
-        id: Date.now() + Math.random(),
-        x: Math.random() * 600,
-        y: Math.random() * 400
-      }));
-      render();
-    });
+    //-------------------------------
+    // 3. 2D Function Plot
+    //-------------------------------
+    let xLine = math.range(-10, 10, 0.1).toArray();
+    let yLine = xLine.map(x => g.evaluate({x}));
 
-    render();
+    Plotly.newPlot("function2D", [{
+      type: "scatter",
+      mode: "lines",
+      x: xLine,
+      y: yLine,
+      line: {color: "red"}
+    }], {title: "2D Function g(x)"});
+
   </script>
 </body>
 </html>
