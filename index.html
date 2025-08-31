@@ -152,94 +152,105 @@
     }
     Plotly.newPlot("vectorField", [arrows], {title:"Vector Field (u,v)", xaxis:{scaleanchor:"y"}, yaxis:{scaleanchor:"x"}});
 
-   //---------------------------------
-  // 3. Function + Sample Points
-  //---------------------------------
+//---------------------------------
+// 3. Function + Sample Points
+//---------------------------------
 
-  const forms = [
-    "A*B^x",     // a b^x
-    "A*x^B",     // a x^b
-    "A*log(x)+B" // a ln(x) + b
-  ];
-  const chosen = forms[Math.floor(Math.random() * forms.length)];
-  const A = (Math.random() * 3 + 1).toFixed(2);
-  const B = (Math.random() * 3 + 1).toFixed(2);
+const forms = [
+  "A*B^x",     // a b^x
+  "A*x^B",     // a x^b
+  "A*log(x)+B" // a ln(x) + b
+];
+const chosen = forms[Math.floor(Math.random() * forms.length)];
+const A = (Math.random() * 3 + 1).toFixed(2);
+const B = (Math.random() * 3 + 1).toFixed(2);
 
-  const exprStr = chosen.replace(/A/g, A).replace(/B/g, B);
-  const g = math.parse(exprStr).compile();
+const exprStr = chosen.replace(/A/g, A).replace(/B/g, B);
+const g = math.parse(exprStr).compile();
 
-  // Sample curve
-  const xLine = math.range(1, 10, 0.1).toArray();
-  const yLine = xLine.map(x => g.evaluate({x}));
+// Pick x-range based on function
+let xStart = 1, xEnd = 10;   // default
+if (chosen.includes("log(x)")) {
+  xStart = 1;                // log(x) undefined at 0
+  xEnd = 10;
+} else {
+  xStart = 0;
+  xEnd = 10;
+}
 
-  const funcTrace = {
-    type: "scatter",
-    mode: "lines",
-    x: xLine,
-    y: yLine,
-    line: { color: "red" },
-    name: `g(x) = ${exprStr}`
-  };
+// Sample curve
+const xLine = math.range(xStart, xEnd, 0.1).toArray();
+const yLine = xLine.map(x => g.evaluate({x}));
 
-  const pointsTrace = {
-    type: "scatter",
-    mode: "markers",
-    x: [],
-    y: [],
-    marker: { color: "black", size: 8 },
-    name: "Sample Points"
-  };
+// Compute ranges with padding
+const yMin = Math.min(...yLine);
+const yMax = Math.max(...yLine);
 
-  const yMin = Math.min(...yLine);
-  const yMax = Math.max(...yLine);
+const funcTrace = {
+  type: "scatter",
+  mode: "lines",
+  x: xLine,
+  y: yLine,
+  line: { color: "red" },
+  name: `g(x) = ${exprStr}`
+};
 
-  const layout2D = {
-    title: `2D Function g(x) = ${exprStr}`,
-    dragmode: false,
-    xaxis: { range: [0, 10] },
-    yaxis: { range: [yMin - 1, yMax + 1] }
-  };
+const pointsTrace = {
+  type: "scatter",
+  mode: "markers",
+  x: [],
+  y: [],
+  marker: { color: "black", size: 8 },
+  name: "Sample Points"
+};
 
-  Plotly.newPlot("function2D", [funcTrace, pointsTrace], layout2D);
+const layout2D = {
+  title: `2D Function g(x) = ${exprStr}`,
+  dragmode: false,
+  xaxis: { range: [xStart, xEnd] },
+  yaxis: { range: [yMin - (yMax-yMin)*0.1, yMax + (yMax-yMin)*0.1] } // ±10% padding
+};
 
-  let dataset = [];
+Plotly.newPlot("function2D", [funcTrace, pointsTrace], layout2D);
 
-  function updateTable() {
-    const tbody = document.querySelector("#pointsTable tbody");
-    tbody.innerHTML = "";
-    dataset.forEach((pt, i) => {
-      let row = document.createElement("tr");
-      row.innerHTML = `<td>${i + 1}</td><td>${pt.x.toFixed(3)}</td><td>${pt.y.toFixed(3)}</td>`;
-      tbody.appendChild(row);
-    });
+let dataset = [];
+
+function updateTable() {
+  const tbody = document.querySelector("#pointsTable tbody");
+  tbody.innerHTML = "";
+  dataset.forEach((pt, i) => {
+    let row = document.createElement("tr");
+    row.innerHTML = `<td>${i + 1}</td><td>${pt.x.toFixed(3)}</td><td>${pt.y.toFixed(3)}</td>`;
+    tbody.appendChild(row);
+  });
+}
+
+// Reset
+document.getElementById("resetBtn").onclick = () => {
+  dataset = [];
+  pointsTrace.x = [];
+  pointsTrace.y = [];
+  Plotly.redraw("function2D");
+  updateTable();
+};
+
+// Random 6 points near curve
+document.getElementById("randomBtn").onclick = () => {
+  dataset = [];
+  pointsTrace.x = [];
+  pointsTrace.y = [];
+  for (let i = 0; i < 6; i++) {
+    const x = Math.random() * (xEnd - xStart) + xStart;
+    const trueY = g.evaluate({x});
+    const err = (Math.random() - 0.5) * 0.5;
+    const y = trueY + err;
+    dataset.push({ x, y });
+    pointsTrace.x.push(x);
+    pointsTrace.y.push(y);
   }
-
-  // Reset
-  document.getElementById("resetBtn").onclick = () => {
-    dataset = [];
-    pointsTrace.x = [];
-    pointsTrace.y = [];
-    Plotly.redraw("function2D");
-    updateTable();
-  };
-
-  // Random 6 points near curve
-  document.getElementById("randomBtn").onclick = () => {
-    dataset = [];
-    pointsTrace.x = [];
-    pointsTrace.y = [];
-    for (let i = 0; i < 6; i++) {
-      const x = Math.random() * 9 + 1;
-      const trueY = g.evaluate({x});
-      const err = (Math.random() - 0.5) * 0.5; // noise in [-0.25, 0.25]
-      const y = trueY + err;
-      dataset.push({ x, y });
-      pointsTrace.x.push(x);
-      pointsTrace.y.push(y);
-    }
-    Plotly.redraw("function2D");
-    updateTable();
-  };
+  Plotly.redraw("function2D");
+  updateTable();
+};
 
 </script>
 </body>
