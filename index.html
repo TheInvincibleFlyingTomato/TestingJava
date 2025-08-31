@@ -16,9 +16,7 @@
       padding: 20px;
       box-sizing: border-box;
     }
-    #function2D {
-      display: none;
-    }
+
 
     .plot { width: 100%; height: 100%; }
     #functionWrapper { display: flex; flex-direction: row; align-items: stretch; width: 100%; height: 100%; }
@@ -120,7 +118,7 @@
   const xLine = math.range(xStart, xEnd, 0.1).toArray();
   const yLine = xLine.map(x => g.evaluate({x}));
 
-  const funcTrace = { type:"scatter", mode:"lines", x:xLine, y:yLine, line:{color:"red"}, name:`g(x) = ${exprStr}` };
+  const funcTrace = { type:"scatter", mode:"lines", x:xLine, y:yLine, line:{color:"red"}, name:`g(x) = ${exprStr}`, visible: false  };
   const pointsTrace = { type:"scatter", mode:"markers", x:[], y:[], marker:{color:"black", size:8}, name:"Sample Points" };
 
   let yMin = Math.min(...yLine);
