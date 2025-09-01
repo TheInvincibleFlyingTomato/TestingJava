@@ -245,7 +245,7 @@ function plotGradientField() {
 
     // Plot all together with fixed axis ranges
     Plotly.newPlot("gradVectorField", [...arrowTraces, trailTrace, currentPointTrace], {
-        xaxis: { range: [0, 5], autorange: false, title: "a" },
+        xaxis: { range: [0, 5], autorange: false, title: "a", scaleanchor: "y", scaleratio: 1},
         yaxis: { range: [0, 5], autorange: false, title: "b" },
         showlegend: false
     });
@@ -298,7 +298,7 @@ function plotGDPoint() {
 
     Plotly.react("surfacePlot", [surfaceTrace, gdTrace], {
         scene: {
-            xaxis: { title: "a", range: [0,5], scaleanchor: "y", scaleratio: 1},
+            xaxis: { title: "a", range: [0,5] },
             yaxis: { title: "b", range: [0,5] },
             zaxis: { 
                 title: "SSE",
