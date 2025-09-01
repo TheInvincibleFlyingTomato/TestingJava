@@ -9,8 +9,8 @@
 <style>
 body {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr; /* three columns for three plots */
-    grid-template-rows: 1fr;            /* one row */
+    grid-template-columns: 1fr 1fr;  /* two columns */
+    grid-template-rows: 1fr 1fr;     /* two rows */
     gap: 20px;
     height: 100vh;
     margin: 0;
@@ -18,7 +18,6 @@ body {
     box-sizing: border-box;
 }
 
-/* Adjust plots to fill their grid cells */
 .plot {
     width: 100%;
     height: 100%;
@@ -45,32 +44,33 @@ th { background: #f0f0f0; position: sticky; top: 0; }
 </head>
 <body>
 
-<div id="surfacePlot" class="plot"></div>
-<div id="gradVectorField" class="plot"></div>
-
-<div id="functionWrapper" class="plot">
-  <div id="leftSide">
-    <div id="function2DWrapper" style="display:flex; flex-direction:column; height:100%;">
-      <div id="equationDisplay" style="text-align:center; font-size:18px; margin-bottom:5px;"></div>
-      <div id="function2D" style="flex:1;"></div>
-    </div>
-    <div id="controls">
-      <button id="randomBtn">Generate Random Points</button>
-      <button id="stepBtn">+Step</button>
-      <button id="step40Btn">+40 Steps</button>
-    </div>
-  </div>
-  <div id="rightSide">
-    <div id="tableWrapper">
-      <table id="pointsTable">
-        <thead>
-          <tr><th>#</th><th>x</th><th>y</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+<!-- (1,1) 2D graph -->
+<div id="function2DWrapper" class="plot" style="grid-column: 1; grid-row: 1; display:flex; flex-direction:column;">
+  <div id="equationDisplay" style="text-align:center; font-size:18px; margin-bottom:5px;"></div>
+  <div id="function2D" style="flex:1;"></div>
+  <div id="controls" style="margin-top:10px; text-align:center;">
+    <button id="randomBtn">Generate Random Points</button>
+    <button id="stepBtn">+Step</button>
+    <button id="step40Btn">+40 Steps</button>
   </div>
 </div>
+
+<!-- (1,2) Vector field -->
+<div id="gradVectorField" class="plot" style="grid-column: 2; grid-row: 1;"></div>
+
+<!-- (2,1) Table -->
+<div id="tableWrapper" class="plot" style="grid-column: 1; grid-row: 2; overflow-y:auto; border:1px solid #ccc; border-radius:8px;">
+  <table id="pointsTable">
+    <thead>
+      <tr><th>#</th><th>x</th><th>y</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- (2,2) SSE graph -->
+<div id="surfacePlot" class="plot" style="grid-column: 2; grid-row: 2;"></div>
+
 
 <script>
 const forms = ["A*B^x","A*x^B","A*log(x)+B"];
