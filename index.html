@@ -276,7 +276,7 @@ function plotGradientField() {
 
 // --- Gradient Descent point with trail ---
 let gdPoint={a:Math.random()*4+0.5,b:Math.random()*4+0.5};
-let trailX=[gdPoint.a], trailY=[gdPoint.b], trailZ=[computeSSE(gdPoint.a,gdPoint.b)];
+let trailX=[gdPoint.a], trailY=[gdPoint.b], trailZ=[Math.log10(computeSSE(gdPoint.a, gdPoint.b) + 1e-6)];
 
 function plotGDPoint() {
     // --- Prepare surface Z with log scale ---
@@ -420,7 +420,7 @@ document.getElementById("stepBtn").onclick = () => {
     // Update plots
     trailX.push(gdPoint.a);
     trailY.push(gdPoint.b);
-    trailZ.push(Math.log10(computeSSE(gdPoint.a, gdPoint.b)+1e-6));
+    trailZ.push(Math.log10(computeSSE(gdPoint.a, gdPoint.b) + 1e-6));
     plotGDPoint();
     plot2DCurrentCurve();
     plotGradientField();
@@ -454,7 +454,7 @@ document.getElementById("step40Btn").onclick = () => {
         stepCount++;
         trailX.push(gdPoint.a);
         trailY.push(gdPoint.b);
-        trailZ.push(Math.log10(computeSSE(gdPoint.a, gdPoint.b)+1e-6));
+        trailZ.push(Math.log10(computeSSE(gdPoint.a, gdPoint.b) + 1e-6));
 
         // Update plots live
         plotGDPoint();
