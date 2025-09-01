@@ -260,15 +260,8 @@ let gdPoint={a:Math.random()*4+0.5,b:Math.random()*4+0.5};
 let trailX=[gdPoint.a], trailY=[gdPoint.b], trailZ=[computeSSE(gdPoint.a,gdPoint.b)];
 
 function plotGDPoint() {
-    // --- Get current camera if exists ---
-    let camera = { eye: { x: 0, y: 0, z: 2 } }; // default
-    const gdPlot = document.getElementById("surfacePlot");
-    if (gdPlot.data && gdPlot.layout && gdPlot.layout.scene && gdPlot.layout.scene.camera) {
-        camera = gdPlot.layout.scene.camera;
-    }
-
     // --- Prepare surface Z with log scale ---
-    const surfaceZ = aVals.map((a, i) =>
+    const surfaceZ = aVals.map((a, i) => 
         bVals.map((b, j) => Math.log10(computeSSE(a, b) + 1e-6))
     );
 
@@ -283,27 +276,31 @@ function plotGDPoint() {
         colorbar: { title: "log10(SSE)" }
     };
 
-    // Gradient descent trace (apply same log scale to z)
+    // Gradient descent trail Z: compute log10(SSE) for each point
+    const gdZ = trailX.map((a, i) => Math.log10(computeSSE(a, trailY[i]) + 1e-6));
+
     const gdTrace = {
         type: "scatter3d",
         mode: "lines+markers",
-        x: trailX,
-        y: trailY,
-        z: trailZ.map(z => Math.log10(z + 1e-6)),
+        x: trailX.map(a => Math.max(0, Math.min(5, a))),  // clip to [0,5]
+        y: trailY.map(b => Math.max(0, Math.min(5, b))),
+        z: gdZ,
         marker: { size: 5, color: "red", symbol: "circle" },
         line: { color: "red", width: 3 }
     };
 
-    // React plot with the current camera
     Plotly.react("surfacePlot", [surfaceTrace, gdTrace], {
         scene: {
             xaxis: { title: "a" },
             yaxis: { title: "b" },
             zaxis: { title: "log10(SSE)" },
-            camera: camera
+            camera: {
+                eye: { x: 0, y: 0, z: 2 } // fixed top-down view
+            }
         }
     });
 }
+
 
 
 function formatEquation(a, b) {
