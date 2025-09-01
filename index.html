@@ -432,7 +432,8 @@ document.getElementById("step40Btn").onclick = () => {
         if (stepsTaken >= maxSteps) clearInterval(interval);
     }, 100);
 };
- document.getElementById("randomBtn").onclick = () => {
+
+document.getElementById("randomBtn").onclick = () => {
     // 1️⃣ Regenerate dataset points
     generatePoints();
     updateTable();
