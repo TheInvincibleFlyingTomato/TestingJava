@@ -265,6 +265,15 @@ function plotGDPoint() {
         bVals.map((b, j) => Math.log10(computeSSE(a, b) + 1e-6))
     );
 
+    // Compute dynamic z-axis ticks for actual SSE
+    const allZ = surfaceZ.flat();
+    const minZ = Math.floor(Math.min(...allZ));
+    const maxZ = Math.ceil(Math.max(...allZ));
+    const nTicks = 5;
+
+    const tickvals = Array.from({length: nTicks}, (_, i) => minZ + i*(maxZ - minZ)/(nTicks-1));
+    const ticktext = tickvals.map(v => (10**v).toFixed(0));
+
     // Surface trace
     const surfaceTrace = {
         type: "surface",
@@ -291,15 +300,18 @@ function plotGDPoint() {
 
     Plotly.react("surfacePlot", [surfaceTrace, gdTrace], {
         scene: {
-            xaxis: { title: "a" },
-            yaxis: { title: "b" },
-            zaxis: { title: "log10(SSE)" },
-            camera: {
-                eye: { x: 0, y: 0, z: 2 } // fixed top-down view
-            }
+            xaxis: { title: "a", range: [0,5] },
+            yaxis: { title: "b", range: [0,5] },
+            zaxis: { 
+                title: "SSE",
+                tickvals: tickvals,
+                ticktext: ticktext
+            },
+            camera: { eye: { x: 0, y: 0, z: 2 } } // fixed top-down view
         }
     });
 }
+
 
 
 
