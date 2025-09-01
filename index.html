@@ -260,33 +260,47 @@ let gdPoint={a:Math.random()*4+0.5,b:Math.random()*4+0.5};
 let trailX=[gdPoint.a], trailY=[gdPoint.b], trailZ=[computeSSE(gdPoint.a,gdPoint.b)];
 
 function plotGDPoint() {
+    // --- Get current camera if exists ---
+    let camera = { eye: { x: 0, y: 0, z: 2 } }; // default
+    const gdPlot = document.getElementById("surfacePlot");
+    if (gdPlot.data && gdPlot.layout && gdPlot.layout.scene && gdPlot.layout.scene.camera) {
+        camera = gdPlot.layout.scene.camera;
+    }
+
+    // --- Prepare surface Z with log scale ---
+    const surfaceZ = aVals.map((a, i) =>
+        bVals.map((b, j) => Math.log10(computeSSE(a, b) + 1e-6))
+    );
+
+    // Surface trace
     const surfaceTrace = {
         type: "surface",
         x: aVals,
         y: bVals,
-        z: aVals.map((_, i) => bVals.map((_, j) => computeSSE(aVals[i], bVals[j]))),
+        z: surfaceZ,
         colorscale: "Viridis",
-        opacity: 0.9
+        opacity: 0.9,
+        colorbar: { title: "log10(SSE)" }
     };
 
+    // Gradient descent trace (apply same log scale to z)
     const gdTrace = {
         type: "scatter3d",
         mode: "lines+markers",
         x: trailX,
         y: trailY,
-        z: trailZ,
+        z: trailZ.map(z => Math.log10(z + 1e-6)),
         marker: { size: 5, color: "red", symbol: "circle" },
         line: { color: "red", width: 3 }
     };
 
+    // React plot with the current camera
     Plotly.react("surfacePlot", [surfaceTrace, gdTrace], {
         scene: {
             xaxis: { title: "a" },
             yaxis: { title: "b" },
-            zaxis: { title: "SSE" },
-            camera: {
-                eye: { x: 0, y: 0, z: 2 }   // top-down view from above
-            }
+            zaxis: { title: "log10(SSE)" },
+            camera: camera
         }
     });
 }
