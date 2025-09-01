@@ -256,13 +256,16 @@ function plotGradientField() {
 
 
 // --- Gradient Descent point with trail ---
-let gdPoint={a:Math.random()*4+0.5,b:Math.random()*4+0.5};
-let trailX=[gdPoint.a], trailY=[gdPoint.b], trailZ=[computeSSE(gdPoint.a,gdPoint.b)];
+// --- Gradient Descent point with trail (log surface) ---
+let gdPoint = { a: Math.random() * 4 + 0.5, b: Math.random() * 4 + 0.5 };
+let trailX = [gdPoint.a];
+let trailY = [gdPoint.b];
+let trailZ = [Math.log10(computeSSE(gdPoint.a, gdPoint.b) + 1e-6)];
 
 function plotGDPoint() {
     // --- Prepare surface Z with log scale ---
-    const surfaceZ = aVals.map((a, i) => 
-        bVals.map((b, j) => Math.log10(computeSSE(a, b) + 1e-6))
+    const surfaceZ = aVals.map(a =>
+        bVals.map(b => Math.log10(computeSSE(a, b) + 1e-6))
     );
 
     // Compute dynamic z-axis ticks for actual SSE
@@ -270,9 +273,8 @@ function plotGDPoint() {
     const minZ = Math.floor(Math.min(...allZ));
     const maxZ = Math.ceil(Math.max(...allZ));
     const nTicks = 5;
-
-    const tickvals = Array.from({length: nTicks}, (_, i) => minZ + i*(maxZ - minZ)/(nTicks-1));
-    const ticktext = tickvals.map(v => (10**v).toFixed(0));
+    const tickvals = Array.from({ length: nTicks }, (_, i) => minZ + i * (maxZ - minZ) / (nTicks - 1));
+    const ticktext = tickvals.map(v => (10 ** v).toFixed(0));
 
     // Surface trace
     const surfaceTrace = {
@@ -285,24 +287,22 @@ function plotGDPoint() {
         colorbar: { title: "log10(SSE)" }
     };
 
-    // Gradient descent trail Z: compute log10(SSE) for each point
-    const gdZ = trailX.map((a, i) => Math.log10(computeSSE(a, trailY[i]) + 1e-6));
-
+    // Gradient descent trail trace
     const gdTrace = {
         type: "scatter3d",
         mode: "lines+markers",
-        x: trailX.map(a => Math.max(0, Math.min(5, a))),  // clip to [0,5]
+        x: trailX.map(a => Math.max(0, Math.min(5, a))),
         y: trailY.map(b => Math.max(0, Math.min(5, b))),
-        z: gdZ,
+        z: trailZ,  // log10(SSE) ensures alignment
         marker: { size: 5, color: "red", symbol: "circle" },
         line: { color: "red", width: 3 }
     };
 
     Plotly.react("surfacePlot", [surfaceTrace, gdTrace], {
         scene: {
-            xaxis: { title: "a", range: [0,5] },
-            yaxis: { title: "b", range: [0,5] },
-            zaxis: { 
+            xaxis: { title: "a", range: [0, 5] },
+            yaxis: { title: "b", range: [0, 5] },
+            zaxis: {
                 title: "SSE",
                 tickvals: tickvals,
                 ticktext: ticktext
@@ -311,9 +311,6 @@ function plotGDPoint() {
         }
     });
 }
-
-
-
 
 function formatEquation(a, b) {
     if (chosen === "A*B^x") {
@@ -370,8 +367,6 @@ function plot2DCurrentCurve() {
 
 
 // --- Step button ---
-let stepCount = 0;  // track number of steps
-
 document.getElementById("stepBtn").onclick = () => {
     // Compute gradient at current point
     let dSda = 0, dSdb = 0;
@@ -381,36 +376,33 @@ document.getElementById("stepBtn").onclick = () => {
         dSdb += 2 * (fx - p.y) * dfdb(gdPoint.a, gdPoint.b, p.x);
     });
 
-    // Normalize gradient (unit direction)
     const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
     if (norm > 0) {
-        const unitU = -dSda / norm;  // steepest descent
+        const unitU = -dSda / norm;
         const unitV = -dSdb / norm;
-
-        // Step size decays as (0.25 * (0.9^n))
         const stepSize = 0.3 * Math.pow(0.95, stepCount);
-
-        // Update point
         gdPoint.a += stepSize * unitU;
         gdPoint.b += stepSize * unitV;
     }
-    
 
     stepCount++;
 
-    // Update plots
+    // Update trail with log10(SSE)
     trailX.push(gdPoint.a);
     trailY.push(gdPoint.b);
-    trailZ.push(computeSSE(gdPoint.a, gdPoint.b));
+    trailZ.push(Math.log10(computeSSE(gdPoint.a, gdPoint.b) + 1e-6));
+
     plotGDPoint();
     plot2DCurrentCurve();
 };
+
+// --- 40-step animation ---
 document.getElementById("step40Btn").onclick = () => {
     let stepsTaken = 0;
     const maxSteps = 40;
 
     const interval = setInterval(() => {
-        // Compute gradient at current point
+        // Compute gradient
         let dSda = 0, dSdb = 0;
         dataset.forEach(p => {
             const fx = g(gdPoint.a, gdPoint.b, p.x);
@@ -418,15 +410,11 @@ document.getElementById("step40Btn").onclick = () => {
             dSdb += 2 * (fx - p.y) * dfdb(gdPoint.a, gdPoint.b, p.x);
         });
 
-        // Normalize gradient
         const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
         if (norm > 0) {
             const unitU = -dSda / norm;
             const unitV = -dSdb / norm;
-
-            // Step size decays as (0.25 * (0.9^n))
             const stepSize = 0.3 * Math.pow(0.95, stepCount);
-
             gdPoint.a += stepSize * unitU;
             gdPoint.b += stepSize * unitV;
         }
@@ -434,18 +422,15 @@ document.getElementById("step40Btn").onclick = () => {
         stepCount++;
         trailX.push(gdPoint.a);
         trailY.push(gdPoint.b);
-        trailZ.push(computeSSE(gdPoint.a, gdPoint.b));
+        trailZ.push(Math.log10(computeSSE(gdPoint.a, gdPoint.b) + 1e-6));
 
-        // Update plots live
         plotGDPoint();
         plot2DCurrentCurve();
         plotGradientField();
 
         stepsTaken++;
-        if (stepsTaken >= maxSteps) {
-            clearInterval(interval); // stop after 40
-        }
-    }, 150); // delay in ms per step (0.3s)
+        if (stepsTaken >= maxSteps) clearInterval(interval);
+    }, 100);
 };
  document.getElementById("randomBtn").onclick = () => {
     // 1️⃣ Regenerate dataset points
