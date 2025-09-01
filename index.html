@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Gradient Descent2</title>
+<title>Gradient Descent</title>
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -29,9 +29,11 @@ th { background: #f0f0f0; position: sticky; top: 0; }
 
 <div id="functionWrapper">
   <div id="leftSide">
-    <div id="function2D"></div>
+    <div id="function2DWrapper" style="display:flex; flex-direction:column; height:100%;">
+      <div id="equationDisplay" style="text-align:center; font-size:18px; margin-bottom:5px;"></div>
+      <div id="function2D" style="flex:1;"></div>
+    </div>
     <div id="controls">
-      <button id="resetBtn">Reset Points</button>
       <button id="randomBtn">Generate Random Points</button>
       <button id="stepBtn">+Step</button>
       <button id="step40Btn">+40 Steps</button>
@@ -137,19 +139,16 @@ function plotSSE(){
 
 // --- Gradient field ---
 function plotGradientField() {
-    let arrows = {
-        type: "scatter",
-        mode: "lines",
-        x: [],
-        y: [],
-        line: { width: 2 },
-        marker: { color: [] }
-    };
+    let arrowTraces = [];
+    const step = 0.15; // shorter arrows
 
-    const step = 0.25; // just controls arrow display length
+    // Helper to clip values to [0,5]
+    function clip(value, min = 0, max = 5) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    // Compute magnitudes for color scaling
     let magnitudes = [];
-
-    // First compute all magnitudes
     for (let i = 0; i < aVals.length; i++) {
         for (let j = 0; j < bVals.length; j++) {
             let dSda = 0, dSdb = 0;
@@ -158,12 +157,10 @@ function plotGradientField() {
                 dSda += 2 * (fx - p.y) * dfda(aVals[i], bVals[j], p.x);
                 dSdb += 2 * (fx - p.y) * dfdb(aVals[i], bVals[j], p.x);
             });
-            const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
-            magnitudes.push(norm);
+            magnitudes.push(Math.sqrt(dSda*dSda + dSdb*dSdb));
         }
     }
 
-    // Scale colors based on relative magnitude
     const minMag = Math.min(...magnitudes);
     const maxMag = Math.max(...magnitudes);
 
@@ -176,46 +173,83 @@ function plotGradientField() {
                 dSda += 2 * (fx - p.y) * dfda(aVals[i], bVals[j], p.x);
                 dSdb += 2 * (fx - p.y) * dfdb(aVals[i], bVals[j], p.x);
             });
-            const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
-            if (norm === 0) continue;
 
-            const u = -dSda / norm * step; // normalized
+            const norm = Math.sqrt(dSda*dSda + dSdb*dSdb);
+            if (norm === 0) { k++; continue; }
+
+            const u = -dSda / norm * step;
             const v = -dSdb / norm * step;
 
-            arrows.x.push(aVals[i], aVals[i] + u, null);
-            arrows.y.push(bVals[j], bVals[j] + v, null);
+            // Color mapping (more dramatic)
+            let ratio = (magnitudes[k] - minMag) / (maxMag - minMag + 1e-9);
+            ratio = Math.sqrt(ratio); // exaggerate contrast
+            const color = `rgb(${Math.round(255*ratio)},0,${Math.round(255*(1-ratio))})`;
 
-            // Color based on relative magnitude
-            const ratio = (magnitudes[k] - minMag) / (maxMag - minMag + 1e-9);
-            const color = `rgb(${Math.round(255 * ratio)},0,${Math.round(255 * (1 - ratio))})`; // blue→red
-            arrows.marker.color.push(color, color, null);
+            // Main arrow line (clipped)
+            arrowTraces.push({
+                type: "scatter",
+                mode: "lines",
+                x: [clip(aVals[i]), clip(aVals[i]+u)],
+                y: [clip(bVals[j]), clip(bVals[j]+v)],
+                line: { color: color, width: 2 },
+                showlegend: false
+            });
+
+            // Arrowhead
+            const headSize = 0.05;
+            const angle = Math.atan2(v, u);
+            const left = angle + Math.PI * 0.25;
+            const right = angle - Math.PI * 0.25;
+
+            const xHead = [
+                clip(aVals[i]+u),
+                clip(aVals[i]+u - headSize*Math.cos(left)),
+                clip(aVals[i]+u - headSize*Math.cos(right))
+            ];
+            const yHead = [
+                clip(bVals[j]+v),
+                clip(bVals[j]+v - headSize*Math.sin(left)),
+                clip(bVals[j]+v - headSize*Math.sin(right))
+            ];
+
+            arrowTraces.push({
+                type: "scatter",
+                mode: "lines",
+                x: [xHead[0], xHead[1], null, xHead[0], xHead[2]],
+                y: [yHead[0], yHead[1], null, yHead[0], yHead[2]],
+                line: { color: color, width: 2 },
+                showlegend: false
+            });
 
             k++;
         }
     }
 
-    // Gradient descent trail + current point
+    // Gradient descent trail
     const trailTrace = {
         type: "scatter",
         mode: "lines+markers",
-        x: trailX,
-        y: trailY,
+        x: trailX.map(v => clip(v)),
+        y: trailY.map(v => clip(v)),
         line: { color: "red", width: 3 },
-        marker: { size: 5, color: "red" }
+        marker: { size: 5, color: "red" },
+        showlegend: false
     };
 
+    // Current GD point
     const currentPointTrace = {
         type: "scatter",
         mode: "markers",
-        x: [gdPoint.a],
-        y: [gdPoint.b],
+        x: [clip(gdPoint.a)],
+        y: [clip(gdPoint.b)],
         marker: { size: 10, color: "black", symbol: "x" },
-        name: "Current Point"
+        showlegend: false
     };
 
-    Plotly.newPlot("gradVectorField", [arrows, trailTrace, currentPointTrace], {
-        xaxis: { range: [0, 5], scaleanchor: "y" },
-        yaxis: { range: [0, 5], scaleanchor: "x" },
+    // Plot all together
+    Plotly.newPlot("gradVectorField", [...arrowTraces, trailTrace, currentPointTrace], {
+        xaxis: { range: [0,5], autorange: false, scaleanchor: "y", title: "a" },
+        yaxis: { range: [0,5], autorange: false, scaleanchor: "x", title: "b" },
         showlegend: false
     });
 }
@@ -226,36 +260,59 @@ let gdPoint={a:Math.random()*4+0.5,b:Math.random()*4+0.5};
 let trailX=[gdPoint.a], trailY=[gdPoint.b], trailZ=[computeSSE(gdPoint.a,gdPoint.b)];
 
 function plotGDPoint() {
+    // --- Prepare surface Z with log scale ---
+    const surfaceZ = aVals.map((a, i) => 
+        bVals.map((b, j) => Math.log10(computeSSE(a, b) + 1e-6))
+    );
+
+    // Compute dynamic z-axis ticks for actual SSE
+    const allZ = surfaceZ.flat();
+    const minZ = Math.floor(Math.min(...allZ));
+    const maxZ = Math.ceil(Math.max(...allZ));
+    const nTicks = 5;
+
+    const tickvals = Array.from({length: nTicks}, (_, i) => minZ + i*(maxZ - minZ)/(nTicks-1));
+    const ticktext = tickvals.map(v => (10**v).toFixed(0));
+
+    // Surface trace
     const surfaceTrace = {
         type: "surface",
         x: aVals,
         y: bVals,
-        z: aVals.map((_, i) => bVals.map((_, j) => computeSSE(aVals[i], bVals[j]))),
+        z: surfaceZ,
         colorscale: "Viridis",
-        opacity: 0.9
+        opacity: 0.9,
+        colorbar: { title: "log10(SSE)" }
     };
+
+    // Gradient descent trail Z: compute log10(SSE) for each point
+    const gdZ = trailX.map((a, i) => Math.log10(computeSSE(a, trailY[i]) + 1e-6));
 
     const gdTrace = {
         type: "scatter3d",
         mode: "lines+markers",
-        x: trailX,
-        y: trailY,
-        z: trailZ,
+        x: trailX.map(a => Math.max(0, Math.min(5, a))),  // clip to [0,5]
+        y: trailY.map(b => Math.max(0, Math.min(5, b))),
+        z: gdZ,
         marker: { size: 5, color: "red", symbol: "circle" },
         line: { color: "red", width: 3 }
     };
 
     Plotly.react("surfacePlot", [surfaceTrace, gdTrace], {
         scene: {
-            xaxis: { title: "a" },
-            yaxis: { title: "b" },
-            zaxis: { title: "SSE" },
-            camera: {
-                eye: { x: 0, y: 0, z: 2 }   // top-down view from above
-            }
+            xaxis: { title: "a", range: [0,5] },
+            yaxis: { title: "b", range: [0,5] },
+            zaxis: { 
+                title: "SSE",
+                tickvals: tickvals,
+                ticktext: ticktext
+            },
+            camera: { eye: { x: 0, y: 0, z: 2 } } // fixed top-down view
         }
     });
 }
+
+
 
 
 function formatEquation(a, b) {
@@ -263,8 +320,8 @@ function formatEquation(a, b) {
         return `y = ${a.toFixed(3)} \\cdot (${b.toFixed(3)})^x`;
     } else if (chosen === "A*x^B") {
         return `y = ${a.toFixed(3)} \\cdot x^{${b.toFixed(3)}}`;
-    } else { // A*log(x)+B
-        return `y = ${a.toFixed(3)} \\cdot \\log(x) + ${b.toFixed(3)}`;
+    } else { // A*ln(x)+B
+        return `y = ${a.toFixed(3)} \\cdot \\ln(x) + ${b.toFixed(3)}`;
     }
 }
 
@@ -286,6 +343,12 @@ function plot2DCurrentCurve() {
     const r2 = computeR2(gdPoint.a, gdPoint.b);
     const eqn = formatEquation(gdPoint.a, gdPoint.b);
 
+    // Update the MathJax equation div
+    const eqDiv = document.getElementById("equationDisplay");
+    eqDiv.innerHTML = `\\(${eqn},\\; R^2 = ${r2.toFixed(4)}\\)`;
+    MathJax.typesetPromise();
+
+    // Update the 2D plot
     Plotly.react("function2D", [
         {
             type: "scatter",
@@ -301,18 +364,7 @@ function plot2DCurrentCurve() {
             y: yVals,
             line: { color: "red" }
         }
-    ], {
-        ...layout2D,
-        annotations: [{
-            xref: "paper", yref: "paper",
-            x: 0.5, y: 1.15,           // centered above plot
-            // Use MathJax \(...\) delimiters to avoid $-mismatches:
-            text: `\\(${eqn},\\; R^2 = ${r2.toFixed(4)}\\)`,
-            showarrow: false,
-            font: { size: 18, color: "black" },
-            align: "center"
-        }]
-    });
+    ], layout2D);
 }
 
 
@@ -336,7 +388,7 @@ document.getElementById("stepBtn").onclick = () => {
         const unitV = -dSdb / norm;
 
         // Step size decays as (0.25 * (0.9^n))
-        const stepSize = 0.25 * Math.pow(0.9, stepCount);
+        const stepSize = 0.3 * Math.pow(0.95, stepCount);
 
         // Update point
         gdPoint.a += stepSize * unitU;
@@ -373,7 +425,7 @@ document.getElementById("step40Btn").onclick = () => {
             const unitV = -dSdb / norm;
 
             // Step size decays as (0.25 * (0.9^n))
-            const stepSize = 0.25 * Math.pow(0.9, stepCount);
+            const stepSize = 0.3 * Math.pow(0.95, stepCount);
 
             gdPoint.a += stepSize * unitU;
             gdPoint.b += stepSize * unitV;
@@ -395,6 +447,25 @@ document.getElementById("step40Btn").onclick = () => {
         }
     }, 150); // delay in ms per step (0.3s)
 };
+ document.getElementById("randomBtn").onclick = () => {
+    // 1️⃣ Regenerate dataset points
+    generatePoints();
+    updateTable();
+
+    // 2️⃣ Reset GD point and trail
+    gdPoint = { a: Math.random() * 4 + 0.5, b: Math.random() * 4 + 0.5 };
+    trailX = [gdPoint.a];
+    trailY = [gdPoint.b];
+    trailZ = [computeSSE(gdPoint.a, gdPoint.b)];
+    stepCount = 0;
+
+    // 3️⃣ Update plots
+    plotSSE();            // regenerate 3D surface
+    plotGradientField();  // regenerate vector field
+    plotGDPoint();        // plot GD point on surface
+    plot2DCurrentCurve(); // plot 2D curve with new points
+};
+ 
 
 
 // --- Initial plots ---
