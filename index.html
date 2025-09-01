@@ -142,6 +142,11 @@ function plotGradientField() {
     let arrowTraces = [];
     const step = 0.15; // shorter arrows
 
+    // Helper to clip values to [0,5]
+    function clip(value, min = 0, max = 5) {
+        return Math.max(min, Math.min(max, value));
+    }
+
     // Compute magnitudes for color scaling
     let magnitudes = [];
     for (let i = 0; i < aVals.length; i++) {
@@ -152,8 +157,7 @@ function plotGradientField() {
                 dSda += 2 * (fx - p.y) * dfda(aVals[i], bVals[j], p.x);
                 dSdb += 2 * (fx - p.y) * dfdb(aVals[i], bVals[j], p.x);
             });
-            const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
-            magnitudes.push(norm);
+            magnitudes.push(Math.sqrt(dSda*dSda + dSdb*dSdb));
         }
     }
 
@@ -170,42 +174,42 @@ function plotGradientField() {
                 dSdb += 2 * (fx - p.y) * dfdb(aVals[i], bVals[j], p.x);
             });
 
-            const norm = Math.sqrt(dSda * dSda + dSdb * dSdb);
+            const norm = Math.sqrt(dSda*dSda + dSdb*dSdb);
             if (norm === 0) { k++; continue; }
 
             const u = -dSda / norm * step;
             const v = -dSdb / norm * step;
 
-            // Dramatic color: exaggerate contrast
+            // Color mapping (more dramatic)
             let ratio = (magnitudes[k] - minMag) / (maxMag - minMag + 1e-9);
-            ratio = Math.pow(ratio, 0.5); // make colors more dramatic
-            const color = `rgb(${Math.round(255 * ratio)},0,${Math.round(255 * (1 - ratio))})`;
+            ratio = Math.sqrt(ratio); // exaggerate contrast
+            const color = `rgb(${Math.round(255*ratio)},0,${Math.round(255*(1-ratio))})`;
 
-            // Main arrow line
+            // Main arrow line (clipped)
             arrowTraces.push({
                 type: "scatter",
                 mode: "lines",
-                x: [aVals[i], aVals[i] + u],
-                y: [bVals[j], bVals[j] + v],
+                x: [clip(aVals[i]), clip(aVals[i]+u)],
+                y: [clip(bVals[j]), clip(bVals[j]+v)],
                 line: { color: color, width: 2 },
                 showlegend: false
             });
 
-            // Arrowhead (small triangle/line at end)
+            // Arrowhead
             const headSize = 0.05;
             const angle = Math.atan2(v, u);
             const left = angle + Math.PI * 0.25;
             const right = angle - Math.PI * 0.25;
 
             const xHead = [
-                aVals[i] + u,
-                aVals[i] + u - headSize * Math.cos(left),
-                aVals[i] + u - headSize * Math.cos(right)
+                clip(aVals[i]+u),
+                clip(aVals[i]+u - headSize*Math.cos(left)),
+                clip(aVals[i]+u - headSize*Math.cos(right))
             ];
             const yHead = [
-                bVals[j] + v,
-                bVals[j] + v - headSize * Math.sin(left),
-                bVals[j] + v - headSize * Math.sin(right)
+                clip(bVals[j]+v),
+                clip(bVals[j]+v - headSize*Math.sin(left)),
+                clip(bVals[j]+v - headSize*Math.sin(right))
             ];
 
             arrowTraces.push({
@@ -221,31 +225,35 @@ function plotGradientField() {
         }
     }
 
-    // Gradient descent trail + current point
+    // Gradient descent trail
     const trailTrace = {
         type: "scatter",
         mode: "lines+markers",
-        x: trailX,
-        y: trailY,
+        x: trailX.map(v => clip(v)),
+        y: trailY.map(v => clip(v)),
         line: { color: "red", width: 3 },
         marker: { size: 5, color: "red" },
         showlegend: false
     };
 
+    // Current GD point
     const currentPointTrace = {
         type: "scatter",
         mode: "markers",
-        x: [gdPoint.a],
-        y: [gdPoint.b],
+        x: [clip(gdPoint.a)],
+        y: [clip(gdPoint.b)],
         marker: { size: 10, color: "black", symbol: "x" },
         showlegend: false
-        };
+    };
+
+    // Plot all together
     Plotly.newPlot("gradVectorField", [...arrowTraces, trailTrace, currentPointTrace], {
-        xaxis: { range: [0, 5], autorange: false, scaleanchor: "y", title: "a" },
-        yaxis: { range: [0, 5], autorange: false, scaleanchor: "x", title: "b" },
+        xaxis: { range: [0,5], autorange: false, scaleanchor: "y", title: "a" },
+        yaxis: { range: [0,5], autorange: false, scaleanchor: "x", title: "b" },
         showlegend: false
     });
 }
+
 
 // --- Gradient Descent point with trail ---
 let gdPoint={a:Math.random()*4+0.5,b:Math.random()*4+0.5};
