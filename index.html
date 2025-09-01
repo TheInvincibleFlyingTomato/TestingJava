@@ -149,7 +149,7 @@ function plotSSE(){
     for(let i=0;i<aVals.length;i++){
         const row=[];
         for(let j=0;j<bVals.length;j++){
-            row.push(computeSSE(aVals[i],bVals[j]));
+            row.push(Math.log10(computeSSE(aVals[i],bVals[j])));
         }
         surfaceZ.push(row);
     }
