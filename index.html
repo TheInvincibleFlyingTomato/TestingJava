@@ -476,7 +476,7 @@ document.getElementById("step40Btn").onclick = () => {
     gdPoint = { a: Math.random() * 4 + 0.5, b: Math.random() * 4 + 0.5 };
     trailX = [gdPoint.a];
     trailY = [gdPoint.b];
-    trailZ = [computeSSE(gdPoint.a, gdPoint.b)];
+    trailZ = [Math.log10(computeSSE(gdPoint.a, gdPoint.b))];
     stepCount = 0;
 
     // 3️⃣ Update plots
