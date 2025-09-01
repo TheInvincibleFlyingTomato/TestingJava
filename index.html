@@ -142,7 +142,6 @@ function plotGradientField() {
     let arrowTraces = [];
     const step = 0.15; // shorter arrows
 
-    // Helper to clip values to [0,5]
     function clip(value, min = 0, max = 5) {
         return Math.max(min, Math.min(max, value));
     }
@@ -180,12 +179,10 @@ function plotGradientField() {
             const u = -dSda / norm * step;
             const v = -dSdb / norm * step;
 
-            // Color mapping (more dramatic)
             let ratio = (magnitudes[k] - minMag) / (maxMag - minMag + 1e-9);
-            ratio = Math.sqrt(ratio); // exaggerate contrast
+            ratio = Math.sqrt(ratio);
             const color = `rgb(${Math.round(255*ratio)},0,${Math.round(255*(1-ratio))})`;
 
-            // Main arrow line (clipped)
             arrowTraces.push({
                 type: "scatter",
                 mode: "lines",
@@ -246,13 +243,14 @@ function plotGradientField() {
         showlegend: false
     };
 
-    // Plot all together
+    // Plot all together with fixed axis ranges
     Plotly.newPlot("gradVectorField", [...arrowTraces, trailTrace, currentPointTrace], {
-        xaxis: { range: [0,5], autorange: false, scaleanchor: "y", title: "a" },
-        yaxis: { range: [0,5], autorange: false, scaleanchor: "x", title: "b" },
+        xaxis: { range: [0, 5], autorange: false, title: "a" },
+        yaxis: { range: [0, 5], autorange: false, title: "b" },
         showlegend: false
     });
 }
+
 
 
 // --- Gradient Descent point with trail ---
