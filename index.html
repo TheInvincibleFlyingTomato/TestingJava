@@ -298,7 +298,7 @@ function plotGDPoint() {
 
     Plotly.react("surfacePlot", [surfaceTrace, gdTrace], {
         scene: {
-            xaxis: { title: "a", range: [0,5] },
+            xaxis: { title: "a", range: [0,5], scaleanchor: "y", scaleratio: 1},
             yaxis: { title: "b", range: [0,5] },
             zaxis: { 
                 title: "SSE",
